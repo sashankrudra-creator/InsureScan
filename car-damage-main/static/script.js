@@ -210,51 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             recList.appendChild(ul);
         }
-        
-        // --- FILL INVOICE TEMPLATE (for PDF) ---
-        const invoiceDate = document.getElementById('pdf_date');
-        if (invoiceDate) invoiceDate.textContent = `DATE: ${new Date().toLocaleDateString()}`;
-
-        const pdfVehicleInfo = document.getElementById('pdf_vehicle_info');
-        if (pdfVehicleInfo && data.vehicle_details) {
-            pdfVehicleInfo.innerHTML = '';
-            for (const [key, val] of Object.entries(data.vehicle_details)) {
-                pdfVehicleInfo.innerHTML += `<p><strong>${key.toUpperCase()}:</strong> ${val}</p>`;
-            }
-        }
-
-        const pdfDamageRows = document.getElementById('pdf_damage_rows');
-        if (pdfDamageRows) {
-            pdfDamageRows.innerHTML = '';
-            let subtotal = 0;
-            if (data.damages && data.damages.length > 0) {
-                data.damages.forEach(d => {
-                    // Extract numeric cost for calculation
-                    let costNum = 0;
-                    if (d.estimated_cost_inr) {
-                        const match = d.estimated_cost_inr.match(/\d+/g);
-                        if (match) costNum = parseInt(match[match.length - 1]); // Take the higher end of range
-                    }
-                    subtotal += costNum;
-
-                    pdfDamageRows.innerHTML += `
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding: 10px 15px;">${d.part || 'Unknown'}</td>
-                            <td style="padding: 10px 15px;">${d.severity || 'Minor'}</td>
-                            <td style="padding: 10px 15px; text-align: right;">₹${d.estimated_cost_inr || '—'}</td>
-                        </tr>`;
-                });
-            }
-            
-            // Totals
-            const gst = Math.round(subtotal * 0.18);
-            const total = subtotal + gst;
-            
-            document.getElementById('pdf_subtotal').textContent = `₹${subtotal.toLocaleString()}`;
-            document.getElementById('pdf_gst').textContent = `₹${gst.toLocaleString()}`;
-            document.getElementById('pdf_total').textContent = `₹${total.toLocaleString()}`;
-        }
-        // ---------------------------------------
 
         // Filename badge
         const now = new Date();
@@ -268,37 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function downloadReportAsPdf() {
-        const element = document.getElementById('invoiceTemplate');
-        if (!element) return;
-
-        // Briefly show it for capture but make it invisible to user (off-screen)
-        element.style.display = 'block';
-        element.style.position = 'absolute';
-        element.style.left = '-9999px';
-
-        const filename = document.getElementById('reportFilename').textContent || 'autoscan_bill.pdf';
-        
-        const opt = {
-            margin:       10,
-            filename:     filename,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { 
-                scale: 2, 
-                useCORS: true, 
-                backgroundColor: '#ffffff', 
-                logging: false,
-                letterRendering: true
-            },
-            jsPDF:        { 
-                unit: 'mm', 
-                format: 'a4', 
-                orientation: 'portrait'
-            }
-        };
-
-        html2pdf().set(opt).from(element).save().then(() => {
-            element.style.display = 'none'; // Hide again
-        });
+        window.location.href = '/export-pdf';
     }
 
     const downloadPdfBtn = document.getElementById('downloadPdfBtn');

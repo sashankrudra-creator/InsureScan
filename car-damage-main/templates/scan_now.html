@@ -132,13 +132,13 @@
           <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:24px;">
             <p style="color:var(--muted); font-size:13px; margin-bottom:12px;">Need professional repairs? Find experts nearby:</p>
             
-            <button id="findShowroomsBtn" style="background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#010f05; border:none; padding:12px 20px; border-radius:50px; cursor:pointer; font-weight:800; display:flex; align-items:center; gap:8px; transition:0.3s; width:100%; justify-content:center; margin-bottom:12px; box-shadow: 0 0 25px rgba(11, 255, 143, 0.4); text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;">
-              📍 Use My Current GPS Location
+            <button id="findShowroomsBtn" style="background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #010f05; border: none; padding: 14px 24px; border-radius: 12px; cursor: pointer; font-weight: 800; display: flex; align-items: center; gap: 10px; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 100%; justify-content: center; margin-bottom: 16px; box-shadow: 0 10px 25px rgba(11, 255, 143, 0.3); text-transform: uppercase; font-size: 14px; letter-spacing: 0.5px;" onmouseover="this.style.transform='translateY(-3px) scale(1.02)'; this.style.boxShadow='0 15px 40px rgba(11, 255, 143, 0.4)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 10px 25px rgba(11, 255, 143, 0.3)'">
+              <span style="font-size: 18px;">🎯</span> USE MY CURRENT GPS LOCATION
             </button>
             
             <div style="display:flex; gap:8px; align-items:center;">
               <input type="text" id="locationInput" placeholder="Or enter City, Area or PIN code..." style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:10px 14px; border-radius:6px; outline:none; font-size:13px; font-family: inherit;">
-              <button id="searchManualLocationBtn" style="background:var(--primary); color:#000; border:none; padding:10px 18px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px;">Search</button>
+              <button id="searchManualLocationBtn" style="background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #010f05; border: none; padding: 10px 22px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s;" onmouseover="this.style.filter='brightness(1.1)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.filter='none'; this.style.transform='translateY(0)'">Search</button>
             </div>
           </div>
         </div>
@@ -150,67 +150,17 @@
     </div>
   </div>
 
-  <!-- HIDDEN INVOICE TEMPLATE FOR PDF -->
-  <div id="invoiceTemplate" style="display: none; width: 800px; padding: 40px; background: white; color: black; font-family: 'Arial', sans-serif;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 20px;">
-      <div>
-        <h1 style="margin: 0; color: #021a0a; font-size: 32px;">AUTOSCAN AI</h1>
-        <p style="margin: 5px 0; color: #666;">Generated AI Damage Assessment Bill</p>
-      </div>
-      <div style="text-align: right;">
-        <p style="margin: 0; font-weight: bold;" id="pdf_date">DATE: —</p>
-        <p style="margin: 2px 0;">REPORT ID: #AS-{{ range(10000, 99999) | random }}</p>
-      </div>
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="scan-animation" style="width:140px; height:140px;">
+      <div class="scan-ring"></div>
+      <div class="scan-ring"></div>
+      <div class="scan-ring"></div>
+      <div class="scan-center" style="width:54px; height:54px; font-size:26px;">🚗</div>
+      <div class="scan-line"></div>
     </div>
-
-    <div style="margin-top: 30px;">
-      <h3 style="background: #f4f4f4; padding: 8px 15px; border-radius: 4px;">VEHICLE DETAILS</h3>
-      <div id="pdf_vehicle_info" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 15px;">
-        <!-- Filled by JS -->
-      </div>
-    </div>
-
-    <div style="margin-top: 30px;">
-      <h3 style="background: #f4f4f4; padding: 8px 15px; border-radius: 4px;">DAMAGED PARTS & COST ESTIMATION</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-        <thead>
-          <tr style="border-bottom: 1px solid #ddd; text-align: left;">
-            <th style="padding: 12px 15px;">PART NAME</th>
-            <th style="padding: 12px 15px;">SEVERITY</th>
-            <th style="padding: 12px 15px; text-align: right;">ESTIMATED COST</th>
-          </tr>
-        </thead>
-        <tbody id="pdf_damage_rows">
-          <!-- Filled by JS -->
-        </tbody>
-      </table>
-    </div>
-
-    <div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px;">
-      <div style="display: flex; justify-content: flex-end;">
-        <div style="width: 300px;">
-          <div style="display: flex; justify-content: space-between; padding: 5px 0;">
-            <span>Subtotal:</span>
-            <span id="pdf_subtotal">—</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 5px 0;">
-            <span>GST (18%):</span>
-            <span id="pdf_gst">—</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 1px solid #000; font-weight: bold; font-size: 20px;">
-            <span>Total Bill:</span>
-            <span id="pdf_total">—</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top: 60px; border-top: 1px dashed #ccc; padding-top: 20px; font-size: 12px; color: #888;">
-      <p><strong>Note:</strong> This is an AI-generated estimate. Actual costs may vary depending on the service center and official part availability. Please visit a certified dealer for a final manual assessment.</p>
-    </div>
+    <p class="loading-text">Analyzing your vehicle with AI...</p>
   </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <!-- FOOTER -->
   <footer>

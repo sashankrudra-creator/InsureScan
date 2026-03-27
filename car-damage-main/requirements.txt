@@ -4,4 +4,4 @@ python-dotenv
 Pillow
 werkzeug
 gunicorn
-psycopg2-binary
+reportlab

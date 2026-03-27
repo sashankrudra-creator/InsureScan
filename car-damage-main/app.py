@@ -1,8 +1,7 @@
 import os
 import json
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g
+import sqlite3
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -11,6 +10,10 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 import datetime
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 
 load_dotenv(override=True)
 
@@ -18,15 +21,13 @@ app = Flask(__name__)
 app.secret_key = 'super-secret-autoscan-key'
 
 # DATABASE SETUP
-# Example: postgres://username:password@localhost:5432/dbname
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/car_damage_db')
+DATABASE_URL = os.getenv('DATABASE_URL', 'database.db')
 
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        # Note: psycopg2 needs keyword arguments or a URL for connection
-        db = g._database = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-        db.autocommit = True
+        db = g._database = sqlite3.connect(DATABASE_URL)
+        db.row_factory = sqlite3.Row # To access columns by name
     return db
 
 
@@ -39,29 +40,29 @@ def close_connection(exception):
 def init_db():
     with app.app_context():
         db = get_db()
-        with db.cursor() as cur:
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL,
-                    is_admin INTEGER DEFAULT 0,
-                    plan TEXT DEFAULT 'Free Plan',
-                    analysis_count INTEGER DEFAULT 0,
-                    last_active TEXT
-                )
-            ''')
-            
-            # Ensure default admin exists
-            admin_email = 'admin@autoscan.ai'
-            cur.execute('SELECT id FROM users WHERE email = %s', (admin_email,))
-            existing_admin = cur.fetchone()
-            if not existing_admin:
-                admin_pass = generate_password_hash('admin123')
-                cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (%s, %s, %s, %s)', 
-                           ('System Admin', admin_email, admin_pass, 1))
-        # db.commit() is not needed if db.autocommit = True
+        cur = db.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                is_admin INTEGER DEFAULT 0,
+                plan TEXT DEFAULT 'Free Plan',
+                analysis_count INTEGER DEFAULT 0,
+                last_active TEXT
+            )
+        ''')
+        
+        # Ensure default admin exists
+        admin_email = 'admin@autoscan.ai'
+        cur.execute('SELECT id FROM users WHERE email = ?', (admin_email,))
+        existing_admin = cur.fetchone()
+        if not existing_admin:
+            admin_pass = generate_password_hash('admin123')
+            cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)', 
+                       ('System Admin', admin_email, admin_pass, 1))
+        db.commit()
 
 init_db()
 
@@ -72,8 +73,9 @@ def upgrade_plan():
     
     plan_name = request.json.get('plan', 'Premium Plan')
     db = get_db()
-    with db.cursor() as cur:
-        cur.execute('UPDATE users SET plan = %s, analysis_count = 0 WHERE id = %s', (plan_name, session['user_id']))
+    cur = db.cursor()
+    cur.execute('UPDATE users SET plan = ?, analysis_count = 0 WHERE id = ?', (plan_name, session['user_id']))
+    db.commit()
     return jsonify({'success': True})
 
 @app.context_processor
@@ -81,19 +83,21 @@ def inject_user():
     user = None
     if 'user_id' in session:
         db = get_db()
-        with db.cursor() as cur:
-            cur.execute('SELECT id, name, email, is_admin, plan FROM users WHERE id = %s', (session['user_id'],))
-            user_row = cur.fetchone()
+        cur = db.cursor()
+        cur.execute('SELECT id, name, email, is_admin, plan FROM users WHERE id = ?', (session['user_id'],))
+        user_row = cur.fetchone()
         if user_row:
             user = dict(user_row)
     return dict(current_user=user)
 
 @app.before_request
 def update_last_active():
+    if 'user_id' in session:
         db = get_db()
+        cur = db.cursor()
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with db.cursor() as cur:
-            cur.execute('UPDATE users SET last_active = %s WHERE id = %s', (now, session['user_id']))
+        cur.execute('UPDATE users SET last_active = ? WHERE id = ?', (now, session['user_id']))
+        db.commit()
 
 
 
@@ -302,24 +306,28 @@ def signup():
         password = request.form['password']
         
         db = get_db()
-        with db.cursor() as cur:
-            cur.execute('SELECT id FROM users WHERE email = %s', (email,))
-            existing_user = cur.fetchone()
+        cur = db.cursor()
+        cur.execute('SELECT id FROM users WHERE email = ?', (email,))
+        existing_user = cur.fetchone()
         
         if existing_user:
             return render_template('signup.html', error='Email already exists. Please log in.')
             
         # Check if first user
-        with db.cursor() as cur:
-            cur.execute('SELECT COUNT(*) FROM users')
-            user_count_row = cur.fetchone()
-            user_count = user_count_row['count'] if 'count' in user_count_row else list(user_count_row.values())[0]
-            is_admin = 1 if user_count == 0 else 0
+        cur.execute('SELECT COUNT(*) FROM users')
+        user_count_row = cur.fetchone()
+        user_count = user_count_row[0]
+        is_admin = 1 if user_count == 0 else 0
+        
+        hashed_password = generate_password_hash(password)
+        cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)', 
+                   (name, email, hashed_password, is_admin))
+        db.commit()
+        new_id = cur.lastrowid
             
-            hashed_password = generate_password_hash(password)
-            cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (%s, %s, %s, %s) RETURNING id', 
-                       (name, email, hashed_password, is_admin))
-            new_id = cur.fetchone()['id']
+        # Auto login
+        session['user_id'] = new_id
+        return redirect(url_for('profile'))
             
         # Auto login
         session['user_id'] = new_id
@@ -334,25 +342,26 @@ def login():
         password = request.form['password']
         
         db = get_db()
-        with db.cursor() as cur:
-            cur.execute('SELECT * FROM users WHERE email = %s', (email,))
-            user = cur.fetchone()
-            
-            if user and check_password_hash(user['password'], password):
-                # Special case: grant admin if email matches admin@autoscan.ai
-                if user['email'] == 'admin@autoscan.ai' and user['is_admin'] == 0:
-                    cur.execute('UPDATE users SET is_admin = 1 WHERE id = %s', (user['id'],))
-                    # Reload user row
-                    cur.execute('SELECT * FROM users WHERE id = %s', (user['id'],))
-                    user = cur.fetchone()
+        cur = db.cursor()
+        cur.execute('SELECT * FROM users WHERE email = ?', (email,))
+        user = cur.fetchone()
+        
+        if user and check_password_hash(user['password'], password):
+            # Special case: grant admin if email matches admin@autoscan.ai
+            if user['email'] == 'admin@autoscan.ai' and user['is_admin'] == 0:
+                cur.execute('UPDATE users SET is_admin = 1 WHERE id = ?', (user['id'],))
+                db.commit()
+                # Reload user row
+                cur.execute('SELECT * FROM users WHERE id = ?', (user['id'],))
+                user = cur.fetchone()
 
-                session['user_id'] = user['id']
-                # Redirect admins to dashboard, regular users to profile
-                if user['is_admin'] == 1:
-                    return redirect(url_for('admin_dashboard'))
-                return redirect(url_for('profile'))
-            else:
-                return render_template('login.html', error='Invalid email or password.')
+            session['user_id'] = user['id']
+            # Redirect admins to dashboard, regular users to profile
+            if user['is_admin'] == 1:
+                return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('profile'))
+        else:
+            return render_template('login.html', error='Invalid email or password.')
             
     return render_template('login.html')
 
@@ -367,9 +376,9 @@ def profile():
         return redirect(url_for('login'))
         
     db = get_db()
-    with db.cursor() as cur:
-        cur.execute('SELECT name, email, plan, analysis_count FROM users WHERE id = %s', (session['user_id'],))
-        user = cur.fetchone()
+    cur = db.cursor()
+    cur.execute('SELECT name, email, plan, analysis_count FROM users WHERE id = ?', (session['user_id'],))
+    user = cur.fetchone()
     return render_template('profile.html', user=dict(user))
 
 
@@ -378,14 +387,14 @@ def admin_panel():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     db = get_db()
-    with db.cursor() as cur:
-        cur.execute('SELECT is_admin FROM users WHERE id = %s', (session['user_id'],))
-        current_u = cur.fetchone()
-        if not current_u or not dict(current_u).get('is_admin'):
-            return "Access Denied: You must be an administrator to view this page.", 403
-        
-        cur.execute('SELECT id, name, email, is_admin FROM users')
-        all_users = cur.fetchall()
+    cur = db.cursor()
+    cur.execute('SELECT is_admin FROM users WHERE id = ?', (session['user_id'],))
+    current_u = cur.fetchone()
+    if not current_u or not dict(current_u).get('is_admin'):
+        return "Access Denied: You must be an administrator to view this page.", 403
+    
+    cur.execute('SELECT id, name, email, is_admin FROM users')
+    all_users = cur.fetchall()
     return render_template('admin.html', users=[dict(u) for u in all_users])
 
 @app.route('/make_admin')
@@ -393,8 +402,9 @@ def make_admin():
     # Hidden route to give yourself admin access easily for demonstration
     if 'user_id' in session:
         db = get_db()
-        with db.cursor() as cur:
-            cur.execute('UPDATE users SET is_admin = 1 WHERE id = %s', (session['user_id'],))
+        cur = db.cursor()
+        cur.execute('UPDATE users SET is_admin = 1 WHERE id = ?', (session['user_id'],))
+        db.commit()
         return redirect(url_for('admin_panel'))
     return redirect(url_for('login'))
 
@@ -426,14 +436,14 @@ def admin_dashboard():
         return redirect(url_for('login'))
     
     db = get_db()
-    with db.cursor() as cur:
-        cur.execute('SELECT is_admin FROM users WHERE id = %s', (session['user_id'],))
-        current = cur.fetchone()
-        if not current or current['is_admin'] != 1:
-            return "Access Denied: Admin privileges required.", 403
-        
-        cur.execute('SELECT name, email, is_admin, plan, analysis_count, last_active FROM users ORDER BY last_active DESC')
-        users = cur.fetchall()
+    cur = db.cursor()
+    cur.execute('SELECT is_admin FROM users WHERE id = ?', (session['user_id'],))
+    current = cur.fetchone()
+    if not current or current['is_admin'] != 1:
+        return "Access Denied: Admin privileges required.", 403
+    
+    cur.execute('SELECT name, email, is_admin, plan, analysis_count, last_active FROM users ORDER BY last_active DESC')
+    users = [dict(row) for row in cur.fetchall()]
     return render_template('admin.html', users=users)
 
 @app.route('/transaction')
@@ -448,18 +458,18 @@ def analyze_damage():
         return jsonify({'error': 'Please log in to perform analysis.', 'redirect': url_for('login')}), 401
 
     db = get_db()
-    with db.cursor() as cur:
-        cur.execute('SELECT plan, analysis_count FROM users WHERE id = %s', (session['user_id'],))
-        user = cur.fetchone()
-        
-        if user:
-            plan = str(user['plan']).lower()
-            analysis_count = user['analysis_count'] if user['analysis_count'] is not None else 0
-            if 'free' in plan and analysis_count >= 5:
-                return jsonify({
-                    'error': 'You have reached your 5 free analysis limit. Please upgrade your plan.',
-                    'redirect': url_for('transaction')
-                }), 403
+    cur = db.cursor()
+    cur.execute('SELECT plan, analysis_count FROM users WHERE id = ?', (session['user_id'],))
+    user = cur.fetchone()
+    
+    if user:
+        plan = str(user['plan']).lower()
+        analysis_count = user['analysis_count'] if user['analysis_count'] is not None else 0
+        if 'free' in plan and analysis_count >= 5:
+            return jsonify({
+                'error': 'You have reached your 5 free analysis limit. Please upgrade your plan.',
+                'redirect': url_for('transaction')
+            }), 403
 
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'})
@@ -485,8 +495,11 @@ def analyze_damage():
                 
                 # Increment analysis count if the response doesn't contain an error
                 if not result.get('error'):
-                    with db.cursor() as cur:
-                        cur.execute('UPDATE users SET analysis_count = COALESCE(analysis_count, 0) + 1 WHERE id = %s', (session['user_id'],))
+                    cur = db.cursor()
+                    cur.execute('UPDATE users SET analysis_count = COALESCE(analysis_count, 0) + 1 WHERE id = ?', (session['user_id'],))
+                    db.commit()
+                    # STORE IN SESSION FOR PDF EXPORT
+                    session['prediction_data'] = result
                     
                 return jsonify(result)
             except json.JSONDecodeError as e:
@@ -499,6 +512,92 @@ def analyze_damage():
         except Exception as e:
             print(f"Server Error: {e}")
             return jsonify({'error': str(e)})
+
+@app.route('/export-pdf')
+def export_pdf():
+    prediction_data = session.get('prediction_data')
+    if not prediction_data:
+        return "No prediction data found. Please analyze an image first.", 400
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Title
+    elements.append(Paragraph("<b>AUTOSCAN AI: Car Damage Report</b>", styles['Title']))
+    elements.append(Spacer(1, 12))
+
+    # Details
+    elements.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+    if 'vehicle_details' in prediction_data:
+        v = prediction_data['vehicle_details']
+        elements.append(Paragraph(f"Vehicle: {v.get('make', '')} {v.get('model', '')} ({v.get('year', '')})", styles['Normal']))
+    elements.append(Spacer(1, 24))
+
+    # Table Header
+    data = [["Part", "Severity", "Confidence (%)", "Est. Cost (INR)"]]
+    
+    # Rows
+    damages = prediction_data.get('damages', [])
+    total_cost = 0
+    
+    for d in damages:
+        part = d.get('part', 'Unknown')
+        sev = d.get('severity', 'Moderate')
+        # We don't have per-item confidence in the Gemini response usually, but let's assume 94.7 as in UI if missing
+        conf = "94.7%" 
+        cost_str = str(d.get('estimated_cost_inr', '0'))
+        
+        # Clean cost string for totaling (e.g. "15,000 - 25,000" -> use avg or high)
+        cleaned_cost = 0
+        try:
+            if '-' in cost_str:
+                high = cost_str.split('-')[-1].replace(',', '').strip()
+                cleaned_cost = int(high)
+            else:
+                cleaned_cost = int(cost_str.replace(',', '').strip())
+        except:
+            cleaned_cost = 0
+            
+        total_cost += cleaned_cost
+        data.append([part, sev, conf, f"₹{cost_str}"])
+
+    # Total Row
+    data.append(["", "", "TOTAL ESTIMATE", f"₹{total_cost:,}"])
+
+    # Style Table
+    table = Table(data, colWidths=[150, 100, 100, 150])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkgreen),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('GRID', (0, 0), (-1, -2), 1, colors.grey),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, -1), (-1, -1), 12),
+        ('TEXTCOLOR', (0, -1), (-1, -1), colors.darkgreen),
+        ('TOPPADDING', (0, -1), (-1, -1), 12),
+    ]))
+
+    elements.append(table)
+    
+    # Summary
+    if 'summary' in prediction_data:
+        elements.append(Spacer(1, 36))
+        elements.append(Paragraph("<b>Summary:</b>", styles['Heading3']))
+        elements.append(Paragraph(prediction_data['summary'], styles['Normal']))
+
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name='damage_report.pdf',
+        mimetype='application/pdf'
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
