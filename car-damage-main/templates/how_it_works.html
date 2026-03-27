@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How It Works — AutoScan AI</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/features">Features</a></li>
+      <li><a href="/how-it-works">How It Works</a></li>
+      <li><a href="/pricing">Pricing</a></li>
+      {% if current_user %}
+        {% if current_user.is_admin %}
+          <li><a href="/admin" style="color:var(--primary)">Dashboard</a></li>
+        {% endif %}
+        <li><a href="/profile">Profile</a></li>
+        <li><a href="/logout" class="nav-cta">Logout</a></li>
+      {% else %}
+        <li><a href="/login?role=admin">Admin Login</a></li>
+        <li><a href="/login">Login</a></li>
+        <li><a href="/signup" class="nav-cta">Sign Up</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <!-- HOW IT WORKS HERO -->
+  <section class="section" style="padding-top: 160px; text-align: center;">
+    <div class="section-tag">Process</div>
+    <h1 class="section-title" style="font-size: 64px;">HOW AUTOSCAN WORKS</h1>
+    <p class="section-desc">From photo to full damage report in under 10 seconds.</p>
+  </section>
+
+  <!-- HOW IT WORKS STEPS -->
+  <section id="how" class="section" style="padding-top:0">
+    <div class="how-wrap">
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-num">01</div>
+          <div>
+            <div class="how-text-title">Upload Vehicle Photo</div>
+            <div class="how-text-desc">Upload a clear image of the damaged vehicle. Clear photos provide the best accuracy.</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">02</div>
+          <div>
+            <div class="how-text-title">AI Damage Detection</div>
+            <div class="how-text-desc">Our Gemini Vision model scans the image, identifying every damage region.</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">03</div>
+          <div>
+            <div class="how-text-title">Severity Classification</div>
+            <div class="how-text-desc">Each detected zone is scored for severity with confidence percentages.</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">04</div>
+          <div>
+            <div class="how-text-title">Receive Full Cost Report</div>
+            <div class="how-text-desc">Get an itemized report with total repair cost estimate in local currency.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="how-visual">
+        <video class="demo-embed-video" controls preload="metadata" poster="">
+          <source src="{{ url_for('static', filename='demo.mp4') }}" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BANNER -->
+  <div class="cta-banner">
+    <h2>READY TO SCAN YOUR VEHICLE?</h2>
+    <p>Join thousands using AutoScan AI today.</p>
+    <div class="cta-actions">
+      <a href="/#upload" class="btn-primary">⚡ Start Free Scan</a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+        <p>AI-powered vehicle damage detection and repair cost estimation.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/features">Features</a></li>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/how-it-works">How It Works</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

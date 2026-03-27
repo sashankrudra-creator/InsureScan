@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Checkout — AutoScan AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .checkout-section {
+      padding: 140px 48px 100px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .checkout-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 40px;
+      margin-top: 48px;
+    }
+    .checkout-form {
+      background: rgba(3, 38, 15, 0.4);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(11, 255, 143, 0.1);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .form-group {
+      margin-bottom: 24px;
+    }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .form-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 14px 16px;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    /* Select dropdown styling */
+    select.form-input {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 16px;
+    }
+    .checkout-summary {
+      background: rgba(3, 38, 15, 0.5);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(11, 255, 143, 0.15);
+      border-radius: var(--radius);
+      padding: 32px;
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 20px rgba(11, 255, 143, 0.05);
+    }
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      font-size: 15px;
+    }
+    .summary-total {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 26px;
+      font-family: 'Bebas Neue', sans-serif;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+    .trust-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 24px;
+      background: var(--surface);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    @media (max-width: 768px) {
+      .checkout-grid {
+        grid-template-columns: 1fr;
+      }
+      .checkout-summary {
+        position: static;
+      }
+      .checkout-section {
+        padding: 100px 24px 80px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/#pricing" class="nav-cta">Back to Pricing</a></li>
+    </ul>
+  </nav>
+
+  <!-- CHECKOUT -->
+  <section class="checkout-section">
+    <div class="section-tag">Secure Checkout</div>
+    <h2 class="section-title">COMPLETE YOUR UPGRADE</h2>
+    <p class="section-desc">You are selecting a premium plan. Enter your billing details below and pay securely via Razorpay.</p>
+    
+    <div class="checkout-grid">
+      <!-- Payment Form -->
+      <div class="checkout-form">
+        <h3 style="margin-bottom: 24px; font-weight: 500; font-size: 18px;">Billing Information</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input type="text" id="fName" class="form-input" placeholder="John" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input type="text" id="lName" class="form-input" placeholder="Doe" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="email" class="form-input" placeholder="john@company.com" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label class="form-label">Company Name (Optional)</label>
+          <input type="text" class="form-input" placeholder="Company Ltd">
+        </div>
+
+        <button class="btn-primary" style="width: 100%; justify-content: center; margin-top: 24px; font-size: 16px; padding: 18px;" onclick="openRazorpay(event)">
+          🔒 Pay Securely via Razorpay
+        </button>
+      </div>
+
+      <!-- Order Summary -->
+      <div class="checkout-summary">
+        <h3 style="margin-bottom: 24px; font-weight: 500; font-size: 18px;">Order Summary</h3>
+        
+        <div class="form-group" style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border);">
+          <label class="form-label">Selected Plan</label>
+          <select class="form-input" id="planSelect" onchange="updatePrice()">
+            <option value="professional" selected>Professional (500 scans/mo)</option>
+            <option value="enterprise">Enterprise (Unlimited scans)</option>
+          </select>
+        </div>
+
+        <div class="summary-item">
+          <span style="color: var(--muted)">Billing Cycle</span>
+          <span>Monthly</span>
+        </div>
+        <div class="summary-item">
+          <span style="color: var(--muted)">Subtotal</span>
+          <span id="subtotalCost">₹ 2,499</span>
+        </div>
+        <div class="summary-item">
+          <span style="color: var(--muted)">Taxes (18% GST)</span>
+          <span id="taxCost">₹ 450</span>
+        </div>
+        
+        <div class="summary-total">
+          <span>Total Today</span>
+          <span id="totalCost">₹ 2,949</span>
+        </div>
+        
+        <div class="trust-badge">
+          <span>✔️ Official Razorpay Partner</span>
+        </div>
+        
+        <div style="margin-top: 24px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.6;">
+          By confirming your payment, you agree to our <a href="#" style="color:var(--text)">Terms of Service</a> & <a href="#" style="color:var(--text)">Privacy Policy</a>. Cancel anytime from your billing dashboard.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+        <p>AI-powered vehicle damage detection and repair cost estimation for the modern automotive industry.</p>
+      </div>
+      <div class="footer-bottom" style="margin-top: 40px;">
+        <span>© 2026 AutoScan AI. All rights reserved.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Razorpay SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  
+  <script>
+    // Simple script to update price when plan changes
+    function updatePrice() {
+      const plan = document.getElementById('planSelect').value;
+      const subtotalEl = document.getElementById('subtotalCost');
+      const taxEl = document.getElementById('taxCost');
+      const totalEl = document.getElementById('totalCost');
+
+      if (plan === 'professional') {
+        subtotalEl.innerText = '₹ 2,499';
+        taxEl.innerText = '₹ 450';
+        totalEl.innerText = '₹ 2,949';
+      } else if (plan === 'enterprise') {
+        subtotalEl.innerText = '₹ 9,999';
+        taxEl.innerText = '₹ 1,800';
+        totalEl.innerText = '₹ 11,799';
+      }
+    }
+    
+    // Check URL parameters to auto-select plan
+    document.addEventListener("DOMContentLoaded", function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const plan = urlParams.get('plan');
+      if (plan === 'enterprise') {
+        document.getElementById('planSelect').value = 'enterprise';
+        updatePrice();
+      }
+    });
+
+    // Razorpay Integration
+    function openRazorpay(e) {
+      e.preventDefault();
+      
+      const plan = document.getElementById('planSelect').value;
+      let amountInPaise = 294900; 
+      let planName = 'Professional Plan';
+      
+      if (plan === 'enterprise') {
+         amountInPaise = 1179900;
+         planName = 'Enterprise Plan';
+      }
+      
+      const fName = document.getElementById('fName').value.trim();
+      const lName = document.getElementById('lName').value.trim();
+      const email = document.getElementById('email').value.trim();
+      
+      if (!fName || !lName || !email) {
+        alert('Please fill out all billing information fields First Name, Last Name, and Email.');
+        return;
+      }
+
+      // Automatically bypass API key requirement and launch the Mock Simulator
+      showMockRazorpay(amountInPaise, email, fName, "/profile", planName);
+      return;
+
+      // --- REAL RAZORPAY EXECUTION ---
+      var options = {
+          "key": myKey,
+          "amount": amountInPaise, 
+          "currency": "INR",
+          "name": "AutoScan AI",
+          "description": `Upgrade to ${planName}`,
+          "handler": function (response){
+              fetch('/upgrade_plan', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ plan: planName })
+              }).then(() => {
+                  alert("Payment Successful! Payment ID: " + response.razorpay_payment_id + "\n\nWelcome to AutoScan AI Premium!");
+                  window.location.href = "/profile?updated=true&t=" + new Date().getTime();
+              }).catch(() => {
+                  alert("Failed to sync plan upgrade to backend. Please contact support.");
+              });
+          },
+          "prefill": {
+              "name": fName + " " + lName,
+              "email": email,
+              "contact": "9999999999"
+          },
+          "theme": {
+              "color": "#e8401c"
+          }
+      };
+      
+      var rzp1 = new Razorpay(options);
+      rzp1.on('payment.failed', function (response){
+              alert("Real Razorpay Error: " + response.error.description + "\n(Check your API Code or Order ID requirements)");
+              // Reset key if it failed so they can be prompted again
+              localStorage.removeItem("rzp_test_key");
+      });
+      rzp1.open();
+    }
+    
+    // BEAUTIFUL MOCK RAZORPAY MODAL (To prevent crashes without an API key)
+    function showMockRazorpay(amount, email, fName, forward_url, planName) {
+        const rzpOverlay = document.createElement("div");
+        rzpOverlay.id = "rzp-mock-modal";
+        rzpOverlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);";
+        
+        const rzpBox = document.createElement("div");
+        rzpBox.style.cssText = "width:360px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.5);font-family:Arial,sans-serif;color:#333;animation: slideUp 0.3s ease-out;";
+        
+        rzpBox.innerHTML = `
+            <style>
+              @keyframes slideUp { from { transform:translateY(30px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+            </style>
+            <!-- Header -->
+            <div style="background:#4ade80;padding:24px;color:#020803;text-align:center;position:relative;">
+                <button onclick="document.getElementById('rzp-mock-modal').remove()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#020803;font-size:20px;cursor:pointer;">&times;</button>
+                <div style="font-weight:bold;font-size:18px;">AutoScan AI</div>
+                <div style="opacity:0.9;font-size:13px;margin-top:4px;">Test Mode Checkout</div>
+                <div style="font-size:32px;font-weight:bold;margin-top:16px;">₹${(amount/100).toLocaleString('en-IN')}</div>
+            </div>
+            <!-- Body -->
+            <div style="padding:24px;">
+                <div style="font-size:13px;color:#666;margin-bottom:20px;text-align:center;">
+                    Logged in as <b>${email}</b>
+                </div>
+                <div style="border:1px solid #e0e0e0;border-radius:6px;padding:12px;margin-bottom:24px;display:flex;align-items:center;">
+                    <div style="background:#f0f0f0;width:40px;height:24px;border-radius:3px;margin-right:12px;"></div>
+                    <div>
+                        <div style="font-size:14px;font-weight:bold;">Test Card</div>
+                        <div style="font-size:12px;color:#888;">4111 11** **** 1111</div>
+                    </div>
+                </div>
+                <!-- Action Buttons -->
+                <button id="rzp-success-btn" style="width:100%;background:#4ade80;color:#020803;border:none;padding:14px;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer;margin-bottom:12px;">Simulate Success</button>
+                <button id="rzp-fail-btn" style="width:100%;background:#f8f8f8;color:#333;border:1px solid #ccc;padding:14px;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer;">Simulate Failure</button>
+            </div>
+            <!-- Footer -->
+            <div style="background:#f9f9f9;padding:12px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;">
+                🔒 Secured by Mock Razorpay SDK
+            </div>
+        `;
+        
+        rzpOverlay.appendChild(rzpBox);
+        document.body.appendChild(rzpOverlay);
+        
+        document.getElementById('rzp-success-btn').onclick = function() {
+            document.getElementById('rzp-mock-modal').remove();
+            fetch('/upgrade_plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: planName })
+            }).then(() => {
+                alert("Payment Successful! Payment ID: pay_Mock" + Math.floor(Math.random()*100000) + "\n\nWelcome to AutoScan AI Premium!");
+                window.location.href = forward_url + "?updated=true&t=" + new Date().getTime();
+            }).catch(() => {
+                alert("Failed to upgrade plan. Please try again.");
+            });
+        };
+        
+        document.getElementById('rzp-fail-btn').onclick = function() {
+            document.getElementById('rzp-mock-modal').remove();
+            alert("Payment Failed: Card declined (Simulated)");
+        };
+    }
+    </script>
+</body>
+</html>

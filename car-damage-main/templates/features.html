@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Features — AutoScan AI</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/features">Features</a></li>
+      <li><a href="/how-it-works">How It Works</a></li>
+      <li><a href="/pricing">Pricing</a></li>
+      {% if current_user %}
+        {% if current_user.is_admin %}
+          <li><a href="/admin" style="color:var(--primary)">Dashboard</a></li>
+        {% endif %}
+        <li><a href="/profile">Profile</a></li>
+        <li><a href="/logout" class="nav-cta">Logout</a></li>
+      {% else %}
+        <li><a href="/login?role=admin">Admin Login</a></li>
+        <li><a href="/login">Login</a></li>
+        <li><a href="/signup" class="nav-cta">Sign Up</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <!-- FEATURES HERO -->
+  <section class="section" style="padding-top: 160px; text-align: center;">
+    <div class="section-tag">Capabilities</div>
+    <h1 class="section-title" style="font-size: 64px;">ADVANCED AI DETECTION</h1>
+    <p class="section-desc">Trained on 2M+ annotated vehicle images across 40+ damage categories.</p>
+  </section>
+
+  <!-- FEATURES GRID -->
+  <section id="features" class="section" style="padding-top:0">
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feat-icon">🚗</div>
+        <div class="feat-title">Panel Dents &amp; Deformations</div>
+        <div class="feat-desc">Identify surface dents, creases, and structural deformations with millimeter precision.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">🔩</div>
+        <div class="feat-title">Scratch &amp; Scuff Analysis</div>
+        <div class="feat-desc">Differentiate between paint scratches and metal exposure.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">💡</div>
+        <div class="feat-title">Headlight &amp; Glass Damage</div>
+        <div class="feat-desc">Detect cracked lenses and shattered windshields instantly.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">🔧</div>
+        <div class="feat-title">Bumper &amp; Fender Damage</div>
+        <div class="feat-desc">Assess cracked bumpers and impact zones for part replacement.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">🎨</div>
+        <div class="feat-title">Paint &amp; Rust Detection</div>
+        <div class="feat-desc">Spot oxidation and paint peeling to prevent structural deterioration.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">📊</div>
+        <div class="feat-title">Full PDF Report Export</div>
+        <div class="feat-desc">Generate insurance-grade reports with itemized cost breakdowns.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEVERITY CLASSIFICATION -->
+  <div class="section" style="padding-top:60px">
+    <div class="section-tag">Damage Catalog</div>
+    <h2 class="section-title">SEVERITY CLASSIFICATION</h2>
+    <div class="damage-grid">
+      <div class="damage-card">
+        <div class="damage-icon-wrap sev-low">🟢</div>
+        <div class="damage-content">
+          <div class="damage-name">Minor Surface Scratches</div>
+          <div class="damage-desc">Light paint scratches. ₹ 1,500 – 4,000</div>
+        </div>
+      </div>
+      <div class="damage-card">
+        <div class="damage-icon-wrap sev-medium">🟡</div>
+        <div class="damage-content">
+          <div class="damage-name">Moderate Panel Dents</div>
+          <div class="damage-desc">Dents requiring panel filling. ₹ 5,000 – 18,000</div>
+        </div>
+      </div>
+      <div class="damage-card">
+        <div class="damage-icon-wrap sev-high">🟠</div>
+        <div class="damage-content">
+          <div class="damage-name">Severe Bumper Cracks</div>
+          <div class="damage-desc">Structural damage. ₹ 12,000 – 35,000</div>
+        </div>
+      </div>
+      <div class="damage-card">
+        <div class="damage-icon-wrap sev-critical">🔴</div>
+        <div class="damage-content">
+          <div class="damage-name">Critical Frame Damage</div>
+          <div class="damage-desc">Chassis deformation. ₹ 40,000 – 1,50,000+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA BANNER -->
+  <div class="cta-banner">
+    <h2>READY TO SCAN YOUR VEHICLE?</h2>
+    <p>Join thousands of workshops and insurers using AutoScan AI today.</p>
+    <div class="cta-actions">
+      <a href="/scan-now" class="btn-primary">⚡ ANALYZE DAMAGE AND LOCATE NEARBY SERVICE CENTRE</a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+        <p>AI-powered vehicle damage detection and repair cost estimation.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/features">Features</a></li>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/how-it-works">How It Works</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

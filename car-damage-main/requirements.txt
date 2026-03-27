@@ -1,0 +1,7 @@
+flask
+google-generativeai
+python-dotenv
+Pillow
+werkzeug
+gunicorn
+psycopg2-binary

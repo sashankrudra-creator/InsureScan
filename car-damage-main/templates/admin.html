@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — AutoScan AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .admin-grid {
+            margin-top: 140px;
+            padding: 0 48px;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 48px;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        .admin-table-wrap {
+            background: rgba(10, 26, 12, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(11, 255, 143, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: var(--text);
+            font-size: 14px;
+        }
+        th {
+            text-align: left;
+            padding: 20px 24px;
+            background: rgba(11, 255, 143, 0.05);
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            border-bottom: 1px solid rgba(11, 255, 143, 0.1);
+        }
+        td {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tr:hover td {
+            background: rgba(11, 255, 143, 0.02);
+        }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-active { background: #0bff8f; box-shadow: 0 0 10px #0bff8f; }
+        .status-inactive { background: #444; }
+        .plan-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .plan-Free { background: rgba(255,255,255,0.05); color: #aaa; }
+        .plan-Professional { background: rgba(11, 255, 143, 0.15); color: #0bff8f; }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav>
+        <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/admin">Dashboard</a></li>
+            <li><a href="/logout" class="nav-cta">Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="admin-grid">
+        <div class="admin-header">
+            <div>
+                <div class="section-tag">Admin Panel</div>
+                <h1 class="section-title" style="margin: 0; font-size: 48px;">User Overview</h1>
+            </div>
+            <div style="text-align: right">
+                <div style="font-family: 'Space Mono', monospace; font-size: 13px; color: var(--muted)">Total System Users</div>
+                <div style="font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: var(--primary)">{{ users|length }}</div>
+            </div>
+        </div>
+
+        <div class="admin-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>User Details</th>
+                        <th>Plan</th>
+                        <th>Analyses</th>
+                        <th>Last Active</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            <!-- Consider active if last_active within 5 minutes -->
+                            <span class="status-dot status-active"></span>
+                            Active
+                        </td>
+                        <td>
+                            <div style="font-weight: 600">{{ user.name }}</div>
+                            <div style="font-size: 12px; color: var(--muted)">{{ user.email }}</div>
+                        </td>
+                        <td>
+                            <span class="plan-badge plan-{{ user.plan.split(' ')[0] if user.plan else 'Free' }}">
+                                {{ user.plan or 'Free' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="font-family: 'Space Mono' sans-serif">{{ user.analysis_count or 0 }}</span>
+                        </td>
+                        <td style="color: var(--muted)">
+                            {{ user.last_active or 'Never' }}
+                        </td>
+                        <td>
+                            {{ 'Admin' if user.is_admin == 1 else 'User' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer style="margin-top: 100px;">
+        <div class="footer-bottom">
+            <p>&copy; 2026 AutoScan AI Administration. Data reflects real-time system activity.</p>
+        </div>
+    </footer>
+</body>
+</html>

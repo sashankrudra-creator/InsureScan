@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoScan AI — Vehicle Damage Detection & Cost Estimation</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/features">Features</a></li>
+      <li><a href="/how-it-works">How It Works</a></li>
+      <li><a href="/pricing">Pricing</a></li>
+      {% if current_user %}
+      {% if current_user.is_admin %}
+      <li><a href="/admin" style="color:var(--primary)">Dashboard</a></li>
+      {% endif %}
+      <li><a href="/profile">Profile</a></li>
+      <li><a href="/logout" class="nav-cta">Logout</a></li>
+      {% else %}
+      <li><a href="/login?role=admin">Admin Login</a></li>
+      <li><a href="/login">Login</a></li>
+      <li><a href="/signup" class="nav-cta">Sign Up</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grid-bg"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-glow2"></div>
+
+    <div class="hero-content">
+      <div class="hero-badge">
+        <div class="badge-dot"></div>
+        AI-Powered Damage Analysis
+      </div>
+      <h1>
+        DETECT DAMAGE.<br />
+        <em>ESTIMATE INSTANTLY.</em>
+      </h1>
+      <p class="hero-sub">
+        Upload any vehicle image and receive instant AI-powered damage detection with detailed repair cost estimations —
+        accurate to within 95%.
+      </p>
+      <div class="hero-actions">
+        <a href="/scan-now" class="btn-primary">⚡ ANALYZE DAMAGE AND LOCATE NEARBY SERVICE CENTRE</a>
+        <a href="/how-it-works" class="btn-secondary">▶ See Demo</a>
+      </div>
+    </div>
+
+    <!-- CAR SLIDER -->
+    <!-- RIGHT CONTENT GROUP -->
+    <div class="hero-right">
+      <!-- CAR SLIDER -->
+      <div class="hero-slider">
+        <div class="slider-track">
+          <div class="slide">
+            <img src="{{ url_for('static', filename='images/car1.avif') }}" alt="Car 1">
+            <div class="slide-caption">Severe Front Bumper Dent</div>
+          </div>
+          <div class="slide">
+            <img src="{{ url_for('static', filename='images/car2.webp') }}" alt="Car 2">
+            <div class="slide-caption">Deep Side Panel Scratches</div>
+          </div>
+          <div class="slide">
+            <img src="{{ url_for('static', filename='images/car3.jpg') }}" alt="Car 3">
+            <div class="slide-caption">Structural Door Deformation</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-card">
+          <div class="stat-num">98<span>%</span></div>
+          <div class="stat-label">Accuracy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">10<span>s</span></div>
+          <div class="stat-label">AVG Scan Time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">50<span>K+</span></div>
+          <div class="stat-label">Analysis</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+
+
+
+
+  <!-- CTA BANNER -->
+  <div id="contact" class="cta-banner">
+    <h2>READY TO SCAN YOUR VEHICLE?</h2>
+    <p>Join thousands of workshops, insurers, and fleet managers using AutoScan AI to cut assessment time and boost
+      accuracy.</p>
+    <div class="cta-actions">
+      <a href="/scan-now" class="btn-primary">⚡ ANALYZE DAMAGE AND LOCATE NEARBY SERVICE CENTRE</a>
+      <a href="/how-it-works" class="btn-secondary">📞 Learn More</a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="nav-logo" href="#"><span>AUTO</span>SCAN AI</a>
+        <p>AI-powered vehicle damage detection and repair cost estimation for the modern automotive industry.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/features">Features</a></li>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/how-it-works">How It Works</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+          <li><a href="#">Data Processing</a></li>
+          <li><a href="#">Cookie Policy</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 AutoScan AI. All rights reserved.</span>
+      <div class="footer-socials">
+        <a href="#" class="social-btn">𝕏</a>
+        <a href="#" class="social-btn">in</a>
+        <a href="#" class="social-btn">gh</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="scan-animation" style="width:140px; height:140px;">
+      <div class="scan-ring"></div>
+      <div class="scan-ring"></div>
+      <div class="scan-ring"></div>
+      <div class="scan-center" style="width:54px; height:54px; font-size:26px;">🚗</div>
+      <div class="scan-line"></div>
+    </div>
+    <p class="loading-text">Analyzing your vehicle with AI...</p>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>

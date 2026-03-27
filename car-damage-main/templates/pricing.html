@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing — AutoScan AI</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/features">Features</a></li>
+      <li><a href="/how-it-works">How It Works</a></li>
+      <li><a href="/pricing">Pricing</a></li>
+      {% if current_user %}
+        {% if current_user.is_admin %}
+          <li><a href="/admin" style="color:var(--primary)">Dashboard</a></li>
+        {% endif %}
+        <li><a href="/profile">Profile</a></li>
+        <li><a href="/logout" class="nav-cta">Logout</a></li>
+      {% else %}
+        <li><a href="/login?role=admin">Admin Login</a></li>
+        <li><a href="/login">Login</a></li>
+        <li><a href="/signup" class="nav-cta">Sign Up</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <!-- PRICING HERO SECTION -->
+  <section class="section" style="padding-top: 160px; text-align: center;">
+    <div class="section-tag">Pricing</div>
+    <h1 class="section-title" style="font-size: 64px;">CHOOSE YOUR PLAN</h1>
+    <p class="section-desc">Flexible plans built for individuals, workshops, and enterprise fleets.</p>
+  </section>
+
+  <!-- PRICING -->
+  <div class="section" style="padding-top:0">
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price"><span>₹</span>0</div>
+        <div class="plan-cycle">Free forever</div>
+        <div class="plan-divider"></div>
+        <div class="plan-features">
+          <div class="plan-feature"><span class="feat-check">✓</span> 5 scans/month</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Basic damage detection</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Cost estimation report</div>
+          <div class="plan-feature"><span class="feat-x">✗</span> PDF export</div>
+          <div class="plan-feature"><span class="feat-x">✗</span> API access</div>
+          <div class="plan-feature"><span class="feat-x">✗</span> Priority processing</div>
+        </div>
+        <a href="/#upload" class="btn-secondary" style="width:100%;justify-content:center">Get Started Free</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <div class="featured-badge">MOST POPULAR</div>
+        <div class="plan-name">Professional</div>
+        <div class="plan-price" style="font-size:30px">Budget Friendly</div>
+        <div class="plan-cycle">per month, billed annually</div>
+        <div class="plan-divider"></div>
+        <div class="plan-features">
+          <div class="plan-feature"><span class="feat-check">✓</span> 500 scans/month</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Advanced AI detection</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Full cost breakdown</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> PDF report export</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> REST API access</div>
+          <div class="plan-feature"><span class="feat-x">✗</span> Custom pricing DB</div>
+        </div>
+        <a href="/transaction?plan=professional" class="btn-primary" style="width:100%;justify-content:center">Start 14-Day Trial</a>
+      </div>
+
+      <div class="pricing-card">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price" style="font-size:30px">Professional</div>
+        <div class="plan-cycle">contact for pricing</div>
+        <div class="plan-divider"></div>
+        <div class="plan-features">
+          <div class="plan-feature"><span class="feat-check">✓</span> Unlimited scans</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> White-label dashboard</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Custom pricing database</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> SLA guarantee</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Dedicated support</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> On-premise deployment</div>
+        </div>
+        <a href="/transaction?plan=enterprise" class="btn-secondary" style="width:100%;justify-content:center">Upgrade to Enterprise</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- TESTIMONIALS -->
+  <div class="section" style="padding-top:60px">
+    <div class="section-tag">Reviews</div>
+    <h2 class="section-title">TRUSTED BY PROFESSIONALS</h2>
+    <div class="testimonials">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-quote">"AutoScan cut our claim processing time from 3 days to 20 minutes. The accuracy is impressive."</div>
+        <div class="testi-author">
+          <div class="author-avatar av1">RK</div>
+          <div>
+            <div class="author-name">Rahul Kapoor</div>
+            <div class="author-role">Claims Head, HDFC Ergo</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-quote">"We integrated the API into our workshop system. Customers now get instant quotes."</div>
+        <div class="testi-author">
+          <div class="author-avatar av2">SM</div>
+          <div>
+            <div class="author-name">Sunita Mehta</div>
+            <div class="author-role">Owner, SpeedFix</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA BANNER -->
+  <div class="cta-banner">
+    <h2>READY TO GET STARTED?</h2>
+    <p>Join thousands of professionals using AutoScan AI today.</p>
+    <div class="cta-actions">
+      <a href="/scan-now" class="btn-primary">⚡ ANALYZE DAMAGE AND LOCATE NEARBY SERVICE CENTRE</a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="nav-logo" href="/"><span>AUTO</span>SCAN AI</a>
+        <p>AI-powered vehicle damage detection and repair cost estimation.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/features">Features</a></li>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/how-it-works">How It Works</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 AutoScan AI. All rights reserved.</span>
+    </div>
+  </footer>
+
+</body>
+</html>

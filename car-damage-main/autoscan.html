@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoScan AI — Vehicle Damage Detection & Cost Estimation</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0c0f;
+      --surface: #111418;
+      --card: #161b22;
+      --border: #1e2530;
+      --accent: #e8401c;
+      --accent2: #f97316;
+      --gold: #f5c542;
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --highlight: #1e2d40;
+      --radius: 14px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── NOISE TEXTURE ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.6;
+    }
+
+    /* ─── NAVBAR ─── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 48px;
+      background: rgba(10, 12, 15, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      letter-spacing: 3px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-logo span {
+      color: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 36px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #fff !important;
+      padding: 9px 22px;
+      border-radius: 6px;
+      font-weight: 600 !important;
+      transition: background 0.2s !important;
+    }
+
+    .nav-cta:hover {
+      background: var(--accent2) !important;
+      color: #fff !important;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      padding: 120px 48px 80px;
+      overflow: hidden;
+    }
+
+    .hero-grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(232, 64, 28, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232, 64, 28, 0.05) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(232, 64, 28, 0.15) 0%, transparent 65%);
+      top: -100px;
+      right: -100px;
+      pointer-events: none;
+    }
+
+    .hero-glow2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.08) 0%, transparent 65%);
+      bottom: 0;
+      left: -50px;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 680px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(232, 64, 28, 0.12);
+      border: 1px solid rgba(232, 64, 28, 0.3);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 28px;
+      animation: fadeSlideUp 0.6s ease both;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(1.4);
+      }
+    }
+
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(56px, 8vw, 100px);
+      line-height: 0.92;
+      letter-spacing: 2px;
+      margin-bottom: 28px;
+      animation: fadeSlideUp 0.7s 0.1s ease both;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero h1 em::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 2px;
+      opacity: 0.4;
+    }
+
+    .hero-sub {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 520px;
+      line-height: 1.7;
+      margin-bottom: 44px;
+      animation: fadeSlideUp 0.7s 0.2s ease both;
+      font-weight: 300;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      animation: fadeSlideUp 0.7s 0.3s ease both;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      padding: 16px 36px;
+      border: none;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent2);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(232, 64, 28, 0.35);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      padding: 16px 28px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--muted);
+      background: var(--surface);
+      transform: translateY(-2px);
+    }
+
+    /* stats row */
+    .hero-stats {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 48px;
+      z-index: 2;
+      animation: fadeSlideUp 0.8s 0.4s ease both;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 32px;
+      text-align: center;
+      min-width: 140px;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s, border-color 0.3s;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+    }
+
+    .stat-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      color: var(--text);
+      line-height: 1;
+      letter-spacing: 1px;
+    }
+
+    .stat-num span {
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* scroll indicator */
+    .scroll-hint {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      z-index: 2;
+      animation: fadeSlideUp 1s 0.6s ease both;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--muted), transparent);
+      animation: scrollLine 2s infinite;
+    }
+
+    @keyframes scrollLine {
+      0% {
+        transform: scaleY(0);
+        transform-origin: top;
+      }
+
+      50% {
+        transform: scaleY(1);
+        transform-origin: top;
+      }
+
+      50.01% {
+        transform: scaleY(1);
+        transform-origin: bottom;
+      }
+
+      100% {
+        transform: scaleY(0);
+        transform-origin: bottom;
+      }
+    }
+
+    /* ─── UPLOAD SECTION ─── */
+    .section {
+      padding: 100px 48px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .section-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-tag::before {
+      content: '';
+      width: 30px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(38px, 5vw, 58px);
+      line-height: 1;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 520px;
+      font-weight: 300;
+      line-height: 1.75;
+    }
+
+    /* Upload Zone */
+    .upload-area {
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: 20px;
+      padding: 64px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+      margin-top: 48px;
+    }
+
+    .upload-area::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 40% at 50% 100%, rgba(232, 64, 28, 0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .upload-area:hover {
+      border-color: var(--accent);
+      background: rgba(22, 27, 34, 0.95);
+      transform: translateY(-2px);
+    }
+
+    .upload-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 24px;
+      background: rgba(232, 64, 28, 0.1);
+      border: 1px solid rgba(232, 64, 28, 0.2);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+    }
+
+    .upload-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .upload-sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+
+    .upload-formats {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .format-tag {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 5px 14px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* ─── PIPELINE STEPS ─── */
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-top: 48px;
+    }
+
+    .pipeline-step {
+      background: var(--card);
+      padding: 36px 28px;
+      position: relative;
+      transition: background 0.3s;
+    }
+
+    .pipeline-step:hover {
+      background: var(--highlight);
+    }
+
+    .step-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+
+    .step-icon {
+      font-size: 28px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .step-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .step-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .step-arrow {
+      position: absolute;
+      right: -12px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      background: var(--accent);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .pipeline-step:last-child .step-arrow {
+      display: none;
+    }
+
+    /* ─── FEATURES ─── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 56px;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s;
+    }
+
+    .feature-card:hover::after {
+      transform: scaleX(1);
+    }
+
+    .feature-card:hover {
+      border-color: rgba(232, 64, 28, 0.3);
+      transform: translateY(-4px);
+    }
+
+    .feat-icon {
+      width: 52px;
+      height: 52px;
+      background: rgba(232, 64, 28, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+
+    .feat-title {
+      font-weight: 600;
+      font-size: 17px;
+      margin-bottom: 10px;
+    }
+
+    .feat-desc {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    /* ─── DAMAGE TYPES ─── */
+    .damage-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 56px;
+    }
+
+    .damage-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      transition: all 0.3s;
+    }
+
+    .damage-card:hover {
+      border-color: rgba(232, 64, 28, 0.3);
+      transform: translateX(4px);
+    }
+
+    .damage-icon-wrap {
+      flex-shrink: 0;
+      width: 54px;
+      height: 54px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .sev-low {
+      background: rgba(34, 197, 94, 0.12);
+      color: #22c55e;
+    }
+
+    .sev-medium {
+      background: rgba(245, 197, 66, 0.12);
+      color: var(--gold);
+    }
+
+    .sev-high {
+      background: rgba(249, 115, 22, 0.12);
+      color: var(--accent2);
+    }
+
+    .sev-critical {
+      background: rgba(232, 64, 28, 0.12);
+      color: var(--accent);
+    }
+
+    /* .damage-content {} */
+    .damage-name {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    .damage-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+
+    .damage-cost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      color: var(--gold);
+      background: rgba(245, 197, 66, 0.08);
+      border: 1px solid rgba(245, 197, 66, 0.2);
+      padding: 4px 12px;
+      border-radius: 100px;
+    }
+
+    /* ─── ESTIMATION PANEL ─── */
+    .estimation-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      margin-top: 56px;
+    }
+
+    .panel-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .panel-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-red {
+      background: #ff5f57;
+    }
+
+    .dot-yellow {
+      background: #febc2e;
+    }
+
+    .dot-green {
+      background: #28c840;
+    }
+
+    .panel-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: 8px;
+      letter-spacing: 1px;
+    }
+
+    .panel-body {
+      padding: 32px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .panel-body > div {
+      width: 48%;
+    }
+
+    .report-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .damage-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .damage-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .dmg-name {
+      font-size: 14px;
+    }
+
+    .dmg-severity {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-weight: 600;
+    }
+
+    .sev-tag-low {
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+    }
+
+    .sev-tag-med {
+      background: rgba(245, 197, 66, 0.1);
+      color: var(--gold);
+    }
+
+    .sev-tag-high {
+      background: rgba(249, 115, 22, 0.1);
+      color: var(--accent2);
+    }
+
+    .sev-tag-crit {
+      background: rgba(232, 64, 28, 0.1);
+      color: var(--accent);
+    }
+
+    .dmg-price {
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+    }
+
+    .cost-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cost-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .cost-row:last-of-type {
+      border-bottom: none;
+    }
+
+    .cost-label {
+      color: var(--muted);
+    }
+
+    .cost-val {
+      font-family: 'Space Mono', monospace;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 16px;
+      background: rgba(232, 64, 28, 0.08);
+      border: 1px solid rgba(232, 64, 28, 0.2);
+      border-radius: 10px;
+      margin-top: 12px;
+    }
+
+    .total-label {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .total-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    .confidence-bar-wrap {
+      margin-top: 20px;
+    }
+
+    .conf-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .conf-val {
+      font-family: 'Space Mono', monospace;
+      color: var(--text);
+    }
+
+    .conf-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .conf-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      position: relative;
+    }
+
+    .conf-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 20%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2));
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% {
+        transform: translateX(-200%);
+      }
+
+      100% {
+        transform: translateX(200%);
+      }
+    }
+
+    /* ─── HOW IT WORKS ─── */
+    .how-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+      margin-top: 56px;
+    }
+
+    .how-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .how-step {
+      display: flex;
+      gap: 24px;
+      position: relative;
+      padding-bottom: 36px;
+    }
+
+    .how-step:last-child {
+      padding-bottom: 0;
+    }
+
+    .how-step::before {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 40px;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), var(--border));
+    }
+
+    .how-step:last-child::before {
+      display: none;
+    }
+
+    .how-num {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      z-index: 1;
+    }
+
+    .how-text-title {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    .how-text-desc {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .how-visual {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      aspect-ratio: 4/3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scan-animation {
+      width: 80%;
+      aspect-ratio: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scan-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(232, 64, 28, 0.3);
+      animation: scanRing 3s ease-in-out infinite;
+    }
+
+    .scan-ring:nth-child(1) {
+      width: 60%;
+      height: 60%;
+      animation-delay: 0s;
+    }
+
+    .scan-ring:nth-child(2) {
+      width: 75%;
+      height: 75%;
+      animation-delay: 0.5s;
+    }
+
+    .scan-ring:nth-child(3) {
+      width: 90%;
+      height: 90%;
+      animation-delay: 1s;
+    }
+
+    @keyframes scanRing {
+
+      0%,
+      100% {
+        opacity: 0.2;
+        transform: scale(0.97);
+      }
+
+      50% {
+        opacity: 0.8;
+        transform: scale(1);
+        border-color: rgba(232, 64, 28, 0.7);
+      }
+    }
+
+    .scan-center {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 2;
+      animation: scanPulse 2s infinite;
+    }
+
+    @keyframes scanPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(232, 64, 28, 0.6);
+      }
+
+      50% {
+        box-shadow: 0 0 0 20px rgba(232, 64, 28, 0);
+      }
+    }
+
+    .scan-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scanMove 2s linear infinite;
+      opacity: 0.7;
+    }
+
+    @keyframes scanMove {
+      0% {
+        top: 20%;
+      }
+
+      50% {
+        top: 80%;
+      }
+
+      100% {
+        top: 20%;
+      }
+    }
+
+    /* ─── TESTIMONIALS ─── */
+    .testimonials {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 56px;
+    }
+
+    .testi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: transform 0.3s, border-color 0.3s;
+    }
+
+    .testi-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(232, 64, 28, 0.25);
+    }
+
+    .testi-stars {
+      color: var(--gold);
+      font-size: 13px;
+      margin-bottom: 16px;
+      letter-spacing: 2px;
+    }
+
+    .testi-quote {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.75;
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+
+    .testi-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .author-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .av1 {
+      background: rgba(232, 64, 28, 0.2);
+      color: var(--accent);
+    }
+
+    .av2 {
+      background: rgba(249, 115, 22, 0.2);
+      color: var(--accent2);
+    }
+
+    .av3 {
+      background: rgba(245, 197, 66, 0.2);
+      color: var(--gold);
+    }
+
+    .author-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .author-role {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ─── PRICING ─── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 56px;
+    }
+
+    .pricing-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .pricing-card.featured {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, rgba(232, 64, 28, 0.05), var(--card));
+    }
+
+    .featured-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 16px;
+      border-radius: 100px;
+    }
+
+    .plan-name {
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .plan-price {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 52px;
+      line-height: 1;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .plan-price span {
+      font-size: 22px;
+      color: var(--muted);
+    }
+
+    .plan-cycle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .plan-divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 24px;
+    }
+
+    .plan-features {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .plan-feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .feat-check {
+      color: #22c55e;
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .feat-x {
+      color: var(--muted);
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ─── CTA BANNER ─── */
+    .cta-banner {
+      margin: 0 48px 100px;
+      background: linear-gradient(135deg, #1a0f0a 0%, #0a0c0f 50%, #0a0f1a 100%);
+      border: 1px solid rgba(232, 64, 28, 0.2);
+      border-radius: 24px;
+      padding: 72px 64px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-banner::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 500px;
+      height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(232, 64, 28, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-banner h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(36px, 5vw, 60px);
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .cta-banner p {
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 480px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+      position: relative;
+    }
+
+    .cta-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 48px 32px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px;
+      max-width: 1280px;
+      margin: 0 auto 48px;
+    }
+
+    .footer-brand p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      margin-top: 12px;
+      max-width: 280px;
+    }
+
+    .footer-col h4 {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .footer-col ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .footer-col a {
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    .footer-col a:hover {
+      color: var(--text);
+    }
+
+    .footer-bottom {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .footer-socials {
+      display: flex;
+      gap: 16px;
+    }
+
+    .social-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      text-decoration: none;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+
+    .social-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 1100px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .pipeline {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .hero-stats {
+        position: static;
+        transform: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+        margin-top: 52px;
+      }
+
+      .hero {
+        flex-direction: column;
+        padding-top: 140px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      nav {
+        padding: 16px 24px;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .section {
+        padding: 72px 24px;
+      }
+
+      .hero {
+        padding: 120px 24px 72px;
+      }
+
+      .damage-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .testimonials {
+        grid-template-columns: 1fr;
+      }
+
+      .pricing-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-body {
+        grid-template-columns: 1fr;
+      }
+
+      .how-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .cta-banner {
+        margin: 0 24px 72px;
+        padding: 48px 32px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .pipeline {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ─── DEMO MODAL ─── */
+    .demo-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .demo-modal.open {
+      display: flex;
+    }
+
+    .demo-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(10px);
+    }
+
+    .demo-modal-box {
+      position: relative;
+      z-index: 1;
+      width: 90%;
+      max-width: 960px;
+      background: #161b22;
+      border: 1px solid rgba(232, 64, 28, 0.3);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8);
+      animation: fadeSlideUp 0.3s ease both;
+    }
+
+    .demo-video {
+      width: 100%;
+      display: block;
+      max-height: 80vh;
+      background: #000;
+    }
+
+    .demo-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      z-index: 10;
+      background: rgba(232, 64, 28, 0.15);
+      border: 1px solid rgba(232, 64, 28, 0.3);
+      color: #e8eaf0;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .demo-close:hover {
+      background: #e8401c;
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <a class="nav-logo" href="#"><span>AUTO</span>SCAN AI</a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How It Works</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <li><a href="#" class="nav-cta">Get Started</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grid-bg"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-glow2"></div>
+
+    <div class="hero-content">
+      <div class="hero-badge">
+        <div class="badge-dot"></div>
+        AI-Powered Damage Analysis
+      </div>
+      <h1>
+        DETECT<br />
+        <em>DAMAGE.</em><br />
+        ESTIMATE<br />
+        INSTANTLY.
+      </h1>
+      <p class="hero-sub">
+        Upload any vehicle image and receive instant AI-powered damage detection with detailed repair cost estimations —
+        accurate to within ±5%.
+      </p>
+      <div class="hero-actions">
+        <a href="#upload" class="btn-primary">
+          ⚡ Analyze Now
+        </a>
+        <a href="#how" class="btn-secondary">
+          ▶ See Demo
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-card">
+        <div class="stat-num">98<span>%</span></div>
+        <div class="stat-label">Detection Accuracy</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">2<span>s</span></div>
+        <div class="stat-label">Avg. Scan Time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">50<span>K+</span></div>
+        <div class="stat-label">Vehicles Analyzed</div>
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- UPLOAD -->
+  <div id="upload" class="section">
+    <div class="section-tag">Step 01</div>
+    <h2 class="section-title">UPLOAD YOUR VEHICLE</h2>
+    <p class="section-desc">Drop any photo of the damaged vehicle — our AI handles the rest. Works with photos from any
+      angle or lighting condition.</p>
+
+    <div class="upload-area">
+      <div class="upload-icon">📷</div>
+      <div class="upload-title">DRAG & DROP YOUR IMAGE</div>
+      <div class="upload-sub">or click to browse from your device</div>
+      <div class="upload-formats">
+        <span class="format-tag">.JPG</span>
+        <span class="format-tag">.PNG</span>
+        <span class="format-tag">.WEBP</span>
+        <span class="format-tag">.HEIC</span>
+        <span class="format-tag">MAX 20MB</span>
+      </div>
+    </div>
+
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="step-num">01 — UPLOAD</div>
+        <span class="step-icon">🖼️</span>
+        <div class="step-title">Image Ingestion</div>
+        <div class="step-desc">Securely upload vehicle photos. Supports multiple angles for comprehensive analysis.
+        </div>
+        <div class="step-arrow">›</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">02 — DETECT</div>
+        <span class="step-icon">🔍</span>
+        <div class="step-title">Damage Detection</div>
+        <div class="step-desc">Our YOLOv8 model identifies and segments all damage regions with bounding boxes.</div>
+        <div class="step-arrow">›</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">03 — CLASSIFY</div>
+        <span class="step-icon">🏷️</span>
+        <div class="step-title">Severity Scoring</div>
+        <div class="step-desc">Each damage type is classified as Minor, Moderate, Severe, or Critical with confidence
+          scores.</div>
+        <div class="step-arrow">›</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">04 — ESTIMATE</div>
+        <span class="step-icon">💰</span>
+        <div class="step-title">Cost Estimation</div>
+        <div class="step-desc">Region-specific labor and parts pricing generates accurate repair cost ranges.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div id="features" class="section" style="padding-top:0">
+    <div class="section-tag">Capabilities</div>
+    <h2 class="section-title">WHAT AUTOSCAN DETECTS</h2>
+    <p class="section-desc">Trained on 2M+ annotated vehicle images across 40+ damage categories.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feat-icon">🚗</div>
+        <div class="feat-title">Panel Dents & Deformations</div>
+        <div class="feat-desc">Identify surface dents, creases, and structural deformations across all body panels with
+          millimeter precision.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">🔩</div>
+        <div class="feat-title">Scratch & Scuff Analysis</div>
+        <div class="feat-desc">Differentiate between paint scratches, primer damage, and metal exposure to determine
+          re-spray vs. full repair needs.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">💡</div>
+        <div class="feat-title">Headlight & Glass Damage</div>
+        <div class="feat-desc">Detect cracked lenses, shattered windshields, and damaged mirrors with replacement cost
+          included.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">🔧</div>
+        <div class="feat-title">Bumper & Fender Damage</div>
+        <div class="feat-desc">Assess cracked bumpers, misaligned fenders, and impact zones to estimate part replacement
+          vs. repair.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">🎨</div>
+        <div class="feat-title">Paint & Rust Detection</div>
+        <div class="feat-desc">Spot oxidation, rust spread, and paint peeling early to prevent structural deterioration
+          and higher costs.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feat-icon">📊</div>
+        <div class="feat-title">Full PDF Report Export</div>
+        <div class="feat-desc">Generate insurance-grade PDF reports with annotated images, severity scores, and itemized
+          cost breakdowns.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAMAGE TYPES -->
+  <div class="section" style="padding-top:0">
+    <div class="section-tag">Damage Catalog</div>
+    <h2 class="section-title">SEVERITY CLASSIFICATION</h2>
+    <p class="section-desc">Every detected issue is assigned a severity level with corresponding repair cost estimates.
+    </p>
+
+    <div class="damage-grid">
+      <div class="damage-card">
+        <div class="damage-icon-wrap sev-low">🟢</div>
+        <div class="damage-content">
+          <div class="damage-name">Minor Surface Scratches</div>
+          <div class="damage-desc">Light paint scratches that don't reach primer. Buffing and touch-up paint only.</div>
+          <div class="damage-cost">₹ 1,500 – 4,000</div>
+        </div>
+      </div>
+      <div class="damage-card">
+        <div class="damage-icon-wrap sev-medium">🟡</div>
+        <div class="damage-content">
+          <div class="damage-name">Moderate Panel Dents</div>
+          <div class="damage-desc">Dents with paint damage requiring panel filling and re-spray of affected area.</div>
+          <div class="damage-cost">₹ 5,000 – 18,000</div>
+        </div>
+      </div>
+      <div class="damage-card">
+        <div class="damage-icon-wrap sev-high">🟠</div>
+        <div class="damage-content">
+          <div class="damage-name">Severe Bumper Cracks</div>
+          <div class="damage-desc">Structural bumper damage requiring complete replacement and sensor recalibration.
+          </div>
+          <div class="damage-cost">₹ 12,000 – 35,000</div>
+        </div>
+      </div>
+      <div class="damage-card">
+        <div class="damage-icon-wrap sev-critical">🔴</div>
+        <div class="damage-content">
+          <div class="damage-name">Critical Frame Damage</div>
+          <div class="damage-desc">Chassis deformation or structural damage requiring frame straightening or
+            replacement.</div>
+          <div class="damage-cost">₹ 40,000 – 1,50,000+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESTIMATION PANEL -->
+  <div class="section" style="padding-top:0">
+    <div class="section-tag">Sample Report</div>
+    <h2 class="section-title">LIVE ESTIMATION PANEL</h2>
+    <p class="section-desc">What a typical AI-generated damage report looks like after analysis.</p>
+
+    <div class="estimation-panel">
+      <div class="panel-header">
+        <div class="panel-dot dot-red"></div>
+        <div class="panel-dot dot-yellow"></div>
+        <div class="panel-dot dot-green"></div>
+        <div class="panel-title">autoscan_report_2024-11-28_MH12AB3456.pdf</div>
+      </div>
+      <div class="panel-body">
+        <div>
+          <div class="report-section-title">Detected Damage</div>
+          <div class="damage-list">
+            <div class="damage-row">
+              <span class="dmg-name">Front Bumper Crack</span>
+              <span class="dmg-severity sev-tag-high">HIGH</span>
+              <span class="dmg-price">₹22,000</span>
+            </div>
+            <div class="damage-row">
+              <span class="dmg-name">Hood Dent (Left)</span>
+              <span class="dmg-severity sev-tag-med">MEDIUM</span>
+              <span class="dmg-price">₹9,500</span>
+            </div>
+            <div class="damage-row">
+              <span class="dmg-name">Headlight Assembly</span>
+              <span class="dmg-severity sev-tag-crit">CRITICAL</span>
+              <span class="dmg-price">₹18,000</span>
+            </div>
+            <div class="damage-row">
+              <span class="dmg-name">Paint Scratch (Door)</span>
+              <span class="dmg-severity sev-tag-low">LOW</span>
+              <span class="dmg-price">₹3,200</span>
+            </div>
+          </div>
+          <div class="confidence-bar-wrap">
+            <div class="conf-label">
+              <span>Model Confidence</span>
+              <span class="conf-val">94.7%</span>
+            </div>
+            <div class="conf-bar">
+              <div class="conf-fill" style="width:94.7%"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="report-section-title">Cost Breakdown</div>
+          <div class="cost-breakdown">
+            <div class="cost-row">
+              <span class="cost-label">Parts Cost</span>
+              <span class="cost-val">₹36,000</span>
+            </div>
+            <div class="cost-row">
+              <span class="cost-label">Labour Charges</span>
+              <span class="cost-val">₹14,200</span>
+            </div>
+            <div class="cost-row">
+              <span class="cost-label">Paint & Finishing</span>
+              <span class="cost-val">₹2,500</span>
+            </div>
+            <div class="cost-row">
+              <span class="cost-label">GST (18%)</span>
+              <span class="cost-val">₹9,486</span>
+            </div>
+          </div>
+          <div class="total-row">
+            <span class="total-label">Total Estimate</span>
+            <span class="total-val">₹62,186</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div id="how" class="section" style="padding-top:0">
+    <div class="section-tag">Process</div>
+    <h2 class="section-title">HOW IT WORKS</h2>
+    <p class="section-desc">From photo to full damage report in under 10 seconds.</p>
+
+    <div class="how-wrap">
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-num">01</div>
+          <div>
+            <div class="how-text-title">Upload Vehicle Photo</div>
+            <div class="how-text-desc">Upload a clear image of the damaged vehicle. Multiple photos improve accuracy. No
+              special equipment needed.</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">02</div>
+          <div>
+            <div class="how-text-title">AI Damage Detection</div>
+            <div class="how-text-desc">Our YOLOv8 + EfficientNet ensemble scans the image, drawing bounding boxes around
+              every damage region.</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">03</div>
+          <div>
+            <div class="how-text-title">Severity Classification</div>
+            <div class="how-text-desc">Each detected zone is scored for severity — Minor, Moderate, Severe, or Critical
+              — with confidence percentages.</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">04</div>
+          <div>
+            <div class="how-text-title">Receive Full Cost Report</div>
+            <div class="how-text-desc">Download an itemized PDF report with annotated images, severity breakdown, and
+              total repair cost estimate.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="how-visual">
+        <video class="demo-embed-video" controls preload="metadata">
+          <source src="static/demo.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+    </div>
+  </div>
+
+  <!-- TESTIMONIALS -->
+  <div class="section" style="padding-top:0">
+    <div class="section-tag">Reviews</div>
+    <h2 class="section-title">TRUSTED BY PROFESSIONALS</h2>
+    <p class="section-desc">Used by insurance companies, workshops, and fleet managers across India.</p>
+
+    <div class="testimonials">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-quote">"AutoScan cut our claim processing time from 3 days to 20 minutes. The accuracy is
+          impressive — our adjusters cross-checked 200 reports and found a &lt;3% variance."</div>
+        <div class="testi-author">
+          <div class="author-avatar av1">RK</div>
+          <div>
+            <div class="author-name">Rahul Kapoor</div>
+            <div class="author-role">Claims Head, HDFC Ergo</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-quote">"We integrated the API into our workshop management system. Customers now get instant
+          quotes before their car even enters the service bay."</div>
+        <div class="testi-author">
+          <div class="author-avatar av2">SM</div>
+          <div>
+            <div class="author-name">Sunita Mehta</div>
+            <div class="author-role">Owner, SpeedFix Auto Workshop</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★☆</div>
+        <div class="testi-quote">"Managing a fleet of 120 vehicles is now effortless. Monthly damage scans keep our
+          maintenance budget predictable and our vehicles in top condition."</div>
+        <div class="testi-author">
+          <div class="author-avatar av3">AT</div>
+          <div>
+            <div class="author-name">Arjun Thomas</div>
+            <div class="author-role">Fleet Manager, LogiMove India</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div id="pricing" class="section" style="padding-top:0">
+    <div class="section-tag">Plans</div>
+    <h2 class="section-title">SIMPLE PRICING</h2>
+    <p class="section-desc">No hidden fees. Start free and scale as you grow.</p>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price"><span>₹</span>0</div>
+        <div class="plan-cycle">Free forever</div>
+        <div class="plan-divider"></div>
+        <div class="plan-features">
+          <div class="plan-feature"><span class="feat-check">✓</span> 5 scans/month</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Basic damage detection</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Cost estimation report</div>
+          <div class="plan-feature"><span class="feat-x">✗</span> PDF export</div>
+          <div class="plan-feature"><span class="feat-x">✗</span> API access</div>
+          <div class="plan-feature"><span class="feat-x">✗</span> Priority processing</div>
+        </div>
+        <a href="#" class="btn-secondary" style="width:100%;justify-content:center">Get Started Free</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <div class="featured-badge">MOST POPULAR</div>
+        <div class="plan-name">Professional</div>
+        <div class="plan-price" style="font-size:30px">Budget Friendly</div>
+        <div class="plan-cycle">per month, billed annually</div>
+        <div class="plan-divider"></div>
+        <div class="plan-features">
+          <div class="plan-feature"><span class="feat-check">✓</span> 500 scans/month</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Advanced AI detection</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Full cost breakdown</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> PDF report export</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> REST API access</div>
+          <div class="plan-feature"><span class="feat-x">✗</span> Custom pricing DB</div>
+        </div>
+        <a href="transaction.html?plan=professional" class="btn-primary" style="width:100%;justify-content:center">Start
+          14-Day Trial</a>
+      </div>
+
+      <div class="pricing-card">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price" style="font-size:30px">Professional</div>
+        <div class="plan-cycle">contact for pricing</div>
+        <div class="plan-divider"></div>
+        <div class="plan-features">
+          <div class="plan-feature"><span class="feat-check">✓</span> Unlimited scans</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> White-label dashboard</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Custom pricing database</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> SLA guarantee</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> Dedicated support</div>
+          <div class="plan-feature"><span class="feat-check">✓</span> On-premise deployment</div>
+        </div>
+        <a href="transaction.html?plan=enterprise" class="btn-secondary"
+          style="width:100%;justify-content:center">Upgrade to Enterprise</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA BANNER -->
+  <div id="contact" class="cta-banner">
+    <h2>READY TO SCAN YOUR VEHICLE?</h2>
+    <p>Join thousands of workshops, insurers, and fleet managers using AutoScan AI to cut assessment time and boost
+      accuracy.</p>
+    <div class="cta-actions">
+      <a href="#" class="btn-primary">⚡ Start Free Scan</a>
+      <a href="#" class="btn-secondary">📞 Talk to Sales</a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="nav-logo" href="#"><span>AUTO</span>SCAN AI</a>
+        <p>AI-powered vehicle damage detection and repair cost estimation for the modern automotive industry.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#">Features</a></li>
+          <li><a href="#">API Docs</a></li>
+          <li><a href="#">Pricing</a></li>
+          <li><a href="#">Changelog</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+          <li><a href="#">Data Processing</a></li>
+          <li><a href="#">Cookie Policy</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2024 AutoScan AI. All rights reserved.</span>
+      <div class="footer-socials">
+        <a href="#" class="social-btn">𝕏</a>
+        <a href="#" class="social-btn">in</a>
+        <a href="#" class="social-btn">gh</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- VIDEO DEMO MODAL -->
+  <div id="demoModal" class="demo-modal" role="dialog" aria-modal="true">
+    <div class="demo-modal-backdrop" id="demoBackdrop"></div>
+    <div class="demo-modal-box">
+      <button class="demo-close" id="demoClose" aria-label="Close">✕</button>
+      <video id="demoVideo" class="demo-video" controls preload="metadata">
+        <source src="static/demo.mp4" type="video/mp4">
+        Your browser does not support HTML5 video.
+      </video>
+    </div>
+  </div>
+
+  <script>
+    const seeDemoBtn = document.getElementById('seeDemoBtn');
+    const demoModal = document.getElementById('demoModal');
+    const demoClose = document.getElementById('demoClose');
+    const demoBackdrop = document.getElementById('demoBackdrop');
+    const demoVideo = document.getElementById('demoVideo');
+
+    function openDemo(e) {
+      if (e) e.preventDefault();
+      demoModal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      demoVideo.play();
+    }
+    function closeDemo() {
+      demoModal.classList.remove('open');
+      document.body.style.overflow = '';
+      demoVideo.pause();
+      demoVideo.currentTime = 0;
+    }
+
+    seeDemoBtn.addEventListener('click', openDemo);
+    demoClose.addEventListener('click', closeDemo);
+    demoBackdrop.addEventListener('click', closeDemo);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && demoModal.classList.contains('open')) closeDemo();
+    });
+  </script>
+
+</body>
+
+</html>
