@@ -18,6 +18,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from flask_cors import CORS
+
 load_dotenv(override=True)
 
 app = Flask(__name__)
