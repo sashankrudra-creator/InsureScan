@@ -31,14 +31,22 @@ def get_db():
     db = getattr(g, '_database', None)
     if db is None:
         if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"):
-            # Fix for Render: replace "postgres://" with "postgresql://"
+            # Fix for Render: replace "postgres://" with "postgresql://" and ensure SSL
             url = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+            if "sslmode" not in url:
+                url += ("?" if "?" not in url else "&") + "sslmode=require"
             db = g._database = psycopg2.connect(url)
             db.autocommit = True
         else:
             db = g._database = sqlite3.connect(DATABASE_URL)
             db.row_factory = sqlite3.Row # To access columns by name
     return db
+
+def query_param(query):
+    """Helper to swap ? for %s if using Postgres"""
+    if DATABASE_URL.startswith("post"):
+        return query.replace('?', '%s')
+    return query
 
 
 @app.teardown_appcontext
@@ -82,16 +90,12 @@ def init_db():
         
         # Ensure default admin exists
         admin_email = 'admin@autoscan.ai'
-        cur.execute('SELECT id FROM users WHERE email = %s' if DATABASE_URL.startswith("post") else 'SELECT id FROM users WHERE email = ?', (admin_email,))
+        cur.execute(query_param('SELECT id FROM users WHERE email = ?'), (admin_email,))
         existing_admin = cur.fetchone()
         if not existing_admin:
             admin_pass = generate_password_hash('admin123')
-            if DATABASE_URL.startswith("post"):
-                cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (%s, %s, %s, %s)', 
-                           ('System Admin', admin_email, admin_pass, 1))
-            else:
-                cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)', 
-                           ('System Admin', admin_email, admin_pass, 1))
+            cur.execute(query_param('INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)'), 
+                       ('System Admin', admin_email, admin_pass, 1))
         db.commit()
 
 init_db()
@@ -103,8 +107,8 @@ def upgrade_plan():
     
     plan_name = request.json.get('plan', 'Premium Plan')
     db = get_db()
-    cur = db.cursor()
-    cur.execute('UPDATE users SET plan = ?, analysis_count = 0 WHERE id = ?', (plan_name, session['user_id']))
+    cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+    cur.execute(query_param('UPDATE users SET plan = ?, analysis_count = 0 WHERE id = ?'), (plan_name, session['user_id']))
     db.commit()
     return jsonify({'success': True})
 
@@ -113,8 +117,8 @@ def inject_user():
     user = None
     if 'user_id' in session:
         db = get_db()
-        cur = db.cursor()
-        cur.execute('SELECT id, name, email, is_admin, plan FROM users WHERE id = ?', (session['user_id'],))
+        cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+        cur.execute(query_param('SELECT id, name, email, is_admin, plan FROM users WHERE id = ?'), (session['user_id'],))
         user_row = cur.fetchone()
         if user_row:
             user = dict(user_row)
@@ -124,9 +128,9 @@ def inject_user():
 def update_last_active():
     if 'user_id' in session:
         db = get_db()
-        cur = db.cursor()
+        cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        cur.execute('UPDATE users SET last_active = ? WHERE id = ?', (now, session['user_id']))
+        cur.execute(query_param('UPDATE users SET last_active = ? WHERE id = ?'), (now, session['user_id']))
         db.commit()
 
 
@@ -336,33 +340,34 @@ def signup():
         password = request.form['password']
         
         db = get_db()
-        cur = db.cursor()
-        cur.execute('SELECT id FROM users WHERE email = ?', (email,))
+        cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+        cur.execute(query_param('SELECT id FROM users WHERE email = ?'), (email,))
         existing_user = cur.fetchone()
         
         if existing_user:
             return render_template('signup.html', error='Email already exists. Please log in.')
             
         # Check if first user
-        cur.execute('SELECT COUNT(*) FROM users')
+        cur.execute(query_param('SELECT COUNT(*) FROM users'))
         user_count_row = cur.fetchone()
-        user_count = user_count_row[0]
+        user_count = list(user_count_row.values())[0] if DATABASE_URL.startswith("post") else user_count_row[0]
         is_admin = 1 if user_count == 0 else 0
         
         hashed_password = generate_password_hash(password)
-        cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)', 
+        cur.execute(query_param('INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)'), 
                    (name, email, hashed_password, is_admin))
         db.commit()
-        new_id = cur.lastrowid
-            
-        # Auto login
-        session['user_id'] = new_id
-        return redirect(url_for('profile'))
-            
-        # Auto login
-        session['user_id'] = new_id
-        return redirect(url_for('profile'))
+        new_id = cur.lastrowid if not DATABASE_URL.startswith("post") else None
         
+        # In postgres we can't reliably use lastrowid like this without RETURNING id, but we can just fetch it
+        if DATABASE_URL.startswith("post"):
+            cur.execute(query_param('SELECT id FROM users WHERE email = ?'), (email,))
+            new_id = cur.fetchone()['id']
+
+        # Auto login
+        session['user_id'] = new_id
+        return redirect(url_for('profile'))
+            
     return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -372,17 +377,17 @@ def login():
         password = request.form['password']
         
         db = get_db()
-        cur = db.cursor()
-        cur.execute('SELECT * FROM users WHERE email = ?', (email,))
+        cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+        cur.execute(query_param('SELECT * FROM users WHERE email = ?'), (email,))
         user = cur.fetchone()
         
         if user and check_password_hash(user['password'], password):
             # Special case: grant admin if email matches admin@autoscan.ai
             if user['email'] == 'admin@autoscan.ai' and user['is_admin'] == 0:
-                cur.execute('UPDATE users SET is_admin = 1 WHERE id = ?', (user['id'],))
+                cur.execute(query_param('UPDATE users SET is_admin = 1 WHERE id = ?'), (user['id'],))
                 db.commit()
                 # Reload user row
-                cur.execute('SELECT * FROM users WHERE id = ?', (user['id'],))
+                cur.execute(query_param('SELECT * FROM users WHERE id = ?'), (user['id'],))
                 user = cur.fetchone()
 
             session['user_id'] = user['id']
@@ -406,8 +411,8 @@ def profile():
         return redirect(url_for('login'))
         
     db = get_db()
-    cur = db.cursor()
-    cur.execute('SELECT name, email, plan, analysis_count FROM users WHERE id = ?', (session['user_id'],))
+    cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+    cur.execute(query_param('SELECT name, email, plan, analysis_count FROM users WHERE id = ?'), (session['user_id'],))
     user = cur.fetchone()
     return render_template('profile.html', user=dict(user))
 
@@ -417,13 +422,13 @@ def admin_panel():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     db = get_db()
-    cur = db.cursor()
-    cur.execute('SELECT is_admin FROM users WHERE id = ?', (session['user_id'],))
+    cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+    cur.execute(query_param('SELECT is_admin FROM users WHERE id = ?'), (session['user_id'],))
     current_u = cur.fetchone()
     if not current_u or not dict(current_u).get('is_admin'):
         return "Access Denied: You must be an administrator to view this page.", 403
     
-    cur.execute('SELECT id, name, email, is_admin FROM users')
+    cur.execute(query_param('SELECT id, name, email, is_admin FROM users'))
     all_users = cur.fetchall()
     return render_template('admin.html', users=[dict(u) for u in all_users])
 
@@ -432,8 +437,8 @@ def make_admin():
     # Hidden route to give yourself admin access easily for demonstration
     if 'user_id' in session:
         db = get_db()
-        cur = db.cursor()
-        cur.execute('UPDATE users SET is_admin = 1 WHERE id = ?', (session['user_id'],))
+        cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+        cur.execute(query_param('UPDATE users SET is_admin = 1 WHERE id = ?'), (session['user_id'],))
         db.commit()
         return redirect(url_for('admin_panel'))
     return redirect(url_for('login'))
@@ -466,13 +471,13 @@ def admin_dashboard():
         return redirect(url_for('login'))
     
     db = get_db()
-    cur = db.cursor()
-    cur.execute('SELECT is_admin FROM users WHERE id = ?', (session['user_id'],))
+    cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+    cur.execute(query_param('SELECT is_admin FROM users WHERE id = ?'), (session['user_id'],))
     current = cur.fetchone()
     if not current or current['is_admin'] != 1:
         return "Access Denied: Admin privileges required.", 403
     
-    cur.execute('SELECT name, email, is_admin, plan, analysis_count, last_active FROM users ORDER BY last_active DESC')
+    cur.execute(query_param('SELECT name, email, is_admin, plan, analysis_count, last_active FROM users ORDER BY last_active DESC'))
     users = [dict(row) for row in cur.fetchall()]
     return render_template('admin.html', users=users)
 
@@ -488,8 +493,8 @@ def analyze_damage():
         return jsonify({'error': 'Please log in to perform analysis.', 'redirect': url_for('login')}), 401
 
     db = get_db()
-    cur = db.cursor()
-    cur.execute('SELECT plan, analysis_count FROM users WHERE id = ?', (session['user_id'],))
+    cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+    cur.execute(query_param('SELECT plan, analysis_count FROM users WHERE id = ?'), (session['user_id'],))
     user = cur.fetchone()
     
     if user:
@@ -525,8 +530,8 @@ def analyze_damage():
                 
                 # Increment analysis count if the response doesn't contain an error
                 if not result.get('error'):
-                    cur = db.cursor()
-                    cur.execute('UPDATE users SET analysis_count = COALESCE(analysis_count, 0) + 1 WHERE id = ?', (session['user_id'],))
+                    cur = db.cursor(cursor_factory=RealDictCursor) if DATABASE_URL.startswith("post") else db.cursor()
+                    cur.execute(query_param('UPDATE users SET analysis_count = COALESCE(analysis_count, 0) + 1 WHERE id = ?'), (session['user_id'],))
                     db.commit()
                     # STORE IN SESSION FOR PDF EXPORT
                     session['prediction_data'] = result
