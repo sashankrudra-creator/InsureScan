@@ -5,3 +5,5 @@ Pillow
 werkzeug
 gunicorn
 reportlab
+flask-cors
+psycopg2-binary

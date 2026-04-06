@@ -15,10 +15,14 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
 load_dotenv(override=True)
 
 app = Flask(__name__)
 app.secret_key = 'super-secret-autoscan-key'
+CORS(app, supports_credentials=True) # Allows your Vercel frontend to talk to this backend
 
 # DATABASE SETUP
 DATABASE_URL = os.getenv('DATABASE_URL', 'database.db')
@@ -26,8 +30,14 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'database.db')
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE_URL)
-        db.row_factory = sqlite3.Row # To access columns by name
+        if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"):
+            # Fix for Render: replace "postgres://" with "postgresql://"
+            url = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+            db = g._database = psycopg2.connect(url)
+            db.autocommit = True
+        else:
+            db = g._database = sqlite3.connect(DATABASE_URL)
+            db.row_factory = sqlite3.Row # To access columns by name
     return db
 
 
@@ -40,28 +50,48 @@ def close_connection(exception):
 def init_db():
     with app.app_context():
         db = get_db()
-        cur = db.cursor()
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                is_admin INTEGER DEFAULT 0,
-                plan TEXT DEFAULT 'Free Plan',
-                analysis_count INTEGER DEFAULT 0,
-                last_active TEXT
-            )
-        ''')
+        # For Postgres, we use RealDictCursor for row access
+        if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"):
+            cur = db.cursor(cursor_factory=RealDictCursor)
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    is_admin INTEGER DEFAULT 0,
+                    plan TEXT DEFAULT 'Free Plan',
+                    analysis_count INTEGER DEFAULT 0,
+                    last_active TEXT
+                )
+            ''')
+        else:
+            cur = db.cursor()
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    is_admin INTEGER DEFAULT 0,
+                    plan TEXT DEFAULT 'Free Plan',
+                    analysis_count INTEGER DEFAULT 0,
+                    last_active TEXT
+                )
+            ''')
         
         # Ensure default admin exists
         admin_email = 'admin@autoscan.ai'
-        cur.execute('SELECT id FROM users WHERE email = ?', (admin_email,))
+        cur.execute('SELECT id FROM users WHERE email = %s' if DATABASE_URL.startswith("post") else 'SELECT id FROM users WHERE email = ?', (admin_email,))
         existing_admin = cur.fetchone()
         if not existing_admin:
             admin_pass = generate_password_hash('admin123')
-            cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)', 
-                       ('System Admin', admin_email, admin_pass, 1))
+            if DATABASE_URL.startswith("post"):
+                cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (%s, %s, %s, %s)', 
+                           ('System Admin', admin_email, admin_pass, 1))
+            else:
+                cur.execute('INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)', 
+                           ('System Admin', admin_email, admin_pass, 1))
         db.commit()
 
 init_db()
