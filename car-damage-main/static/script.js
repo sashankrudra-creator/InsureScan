@@ -73,8 +73,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleFileSelect(file) {
-        if (!file.type.startsWith('image/')) {
-            showError('Please upload an image file (JPG, PNG, WEBP, HEIC).');
+        // More robust check for mobile: some mobile browsers don't provide a type
+        // but we can check the extension as a fallback.
+        const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|heic)$/i.test(file.name);
+        
+        if (!isImage) {
+            showError('Please upload a valid image file.');
             return;
         }
         selectedFile = file;
@@ -107,10 +111,14 @@ document.addEventListener('DOMContentLoaded', () => {
             analyzeBtn.disabled = true;
             analyzeBtn.style.opacity = '0.5';
 
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-
             try {
+                // 1. Compress image before upload (converts HEIC to JPG & reduces size)
+                const fileToUpload = await compressImage(selectedFile);
+                
+                const formData = new FormData();
+                formData.append('file', fileToUpload);
+
+                // 2. Perform the upload
                 const response = await fetch('/analyze', { method: 'POST', body: formData });
                 let data = null;
                 try { data = await response.json(); } catch (e) {}
@@ -128,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (err) {
                 console.error('Error:', err);
-                showError('An error occurred while analyzing the image. Please try again.');
+                showError('Could not process image. Please try a different photo or check your connection.');
             } finally {
                 if (loadingOverlay) loadingOverlay.classList.remove('active');
                 analyzeBtn.disabled = false;
@@ -324,4 +332,55 @@ document.addEventListener('DOMContentLoaded', () => {
             if (navToggle) navToggle.textContent = '☰';
         }
     });
+
+    /**
+     * Helper to compress images before upload
+     * This fixes mobile upload issues (large file sizes & HEIC format)
+     */
+    async function compressImage(file, maxWidth = 1280, quality = 0.75) {
+        // If file is already small (< 500KB) and is a standard format, don't compress
+        if (file.size < 500 * 1024 && file.type === 'image/jpeg') {
+            return file;
+        }
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Calculate new dimensions
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            reject(new Error('Compression failed'));
+                            return;
+                        }
+                        // Create a new File object from the blob
+                        const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        });
+                        resolve(compressedFile);
+                    }, 'image/jpeg', quality);
+                };
+                img.onerror = () => reject(new Error('Image load failed'));
+            };
+            reader.onerror = () => reject(new Error('File read failed'));
+        });
+    }
 });
