@@ -283,7 +283,7 @@ def get_gemini_response(image):
         model = genai.GenerativeModel(model_name)
         
         # Retry logic with automatic API key cycling
-        max_attempts = len(available_keys) * 2  # Try each key up to 2 times
+        max_attempts = len(available_keys) * 2
         base_delay = 2 
 
         for attempt in range(max_attempts):
@@ -521,6 +521,16 @@ def analyze_damage():
             # Read the image file
             image_bytes = file.read()
             image = Image.open(io.BytesIO(image_bytes))
+            
+            # Convert to RGB if necessary (handles RGBA/Transparency)
+            if image.mode in ("RGBA", "P"):
+                image = image.convert("RGB")
+            
+            # Resize image if it's too large (e.g., > 1600px)
+            # This speeds up the upload to Gemini and prevents memory issues
+            max_size = 1600
+            if max(image.size) > max_size:
+                image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
             
             # Get response from Gemini
             gemini_response = get_gemini_response(image)
