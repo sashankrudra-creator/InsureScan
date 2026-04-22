@@ -208,129 +208,58 @@ initial_keys = get_api_keys()
 if initial_keys:
     genai.configure(api_key=initial_keys[0])
 
-def get_gemini_response(image):
-    # Reload keys dynamically
+def compress_image(image_bytes):
+    """Resizes and compresses the image to prevent timeouts."""
+    img = Image.open(io.BytesIO(image_bytes))
+    img.thumbnail((800, 800))
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG", quality=50)
+    buffer.seek(0)
+    return {
+        "mime_type": "image/jpeg",
+        "data": buffer.getvalue()
+    }
+
+def get_gemini_response(image_data):
+    """Sends compressed image data to Gemini Flash."""
     available_keys = get_api_keys()
-    
     if not available_keys:
-        raise ValueError("API Keys not found. Please set GOOGLE_API_KEY or GOOGLE_API_KEYS in .env file.")
+        return json.dumps({"error": "API Keys not found."})
 
-    # List of models to try in order of preference
-    # Prioritizing 'lite' models which might be less congested/have better availability
-    models_to_try = [
-        'gemini-1.5-flash',
-        'gemini-flash-latest',
-        'gemini-2.0-flash-lite-001',
-        'gemini-2.0-flash-lite',
-        'gemini-2.0-flash',
-        'gemini-pro-latest'
-    ]
-
-    prompt = """
-    You are an expert car damage assessor and cost estimator.
+    # Step 2: Use Flash model as requested
+    model = genai.GenerativeModel("gemini-1.5-flash")
     
-    IMPORTANT FIRST STEP: Verify if the image clearly contains a car (e.g., hatchback, sedan, SUV, coupe, wagon, etc.).
-    If the image DOES NOT contain a car (for example, if it is a motorcycle, bicycle, truck, bus, person, landscape, document, or any other object), you must NOT perform any damage analysis. Instead, output a JSON object with this exact schema:
-    {
-        "error": "This application is only for analyzing car damages. Please upload an image of a car."
-    }
-    
-    If the image DOES contain a car, proceed with the damage analysis and output a JSON object with this exact schema:
-    {
-        "vehicle_details": {
-            "make": "Vehicle Make",
-            "model": "Vehicle Model",
-            "year": "Estimated Year",
-            "color": "Vehicle Color",
-            "license_plate": "License Plate Number (if visible)",
-             "type": "Vehicle Type (Sedan, SUV, Truck, etc.)"
-        },
-        "damages": [
-            {
-                "part": "Part Name",
-                "description": "Description of damage",
-                "severity": "Severity Level (Minor, Moderate, Severe)",
-                "estimated_cost_inr": "Cost Range INR",
-                "estimated_cost_usd": "Cost Range USD"
-            }
-        ],
-        "total_estimated_cost_inr": "Total Range INR",
-        "total_estimated_cost_usd": "Total Range USD",
-        "recommendations": ["List of 3-5 recommended repairs"],
-        "summary": "Brief summary of the overall condition (max 2 sentences)."
-    }
-    """
-    
+    # Step 7: Reduce tokens and adjust temperature
     generation_config = {
-        "temperature": 0.4,
-        "top_p": 1,
-        "top_k": 32,
-        "max_output_tokens": 4096,
+        "temperature": 0.3,
+        "max_output_tokens": 150,
         "response_mime_type": "application/json",
     }
 
-    import time
-    from google.api_core.exceptions import ResourceExhausted, NotFound
+    current_key = available_keys[_api_cycle_state['index'] % len(available_keys)]
+    genai.configure(api_key=current_key)
 
-    last_error = None
+    prompt = """
+    You are an expert car damage assessor. Analyze the image and return a JSON:
+    {
+        "vehicle_details": {"make": "", "model": ""},
+        "damages": [{"part": "", "severity": "", "estimated_cost_inr": ""}],
+        "total_estimated_cost_inr": "",
+        "summary": ""
+    }
+    """
 
-    for i, model_name in enumerate(models_to_try):
-        # Add a small delay before trying the next model to avoid hammering the API
-        if i > 0:
-            time.sleep(2)
-            
-        # print(f"DEBUG: Trying model {model_name}...")
-        model = genai.GenerativeModel(model_name)
-        
-        # Retry logic with automatic API key cycling
-        max_attempts = len(available_keys) * 2
-        base_delay = 2 
+    # Step 6: Step-by-step try/except block
+    try:
+        response = model.generate_content(
+            [prompt, image_data],
+            generation_config=generation_config
+        )
+        return response.text
+    except Exception as e:
+        print("Gemini Error:", e)
+        return json.dumps({"error": "Gemini analysis failed"})
 
-        for attempt in range(max_attempts):
-            # Configure with the current key in the cycle
-            current_key = available_keys[_api_cycle_state['index'] % len(available_keys)]
-            genai.configure(api_key=current_key)
-
-            try:
-                response = model.generate_content(
-                    [prompt, image],
-                    generation_config=generation_config
-                )
-                return response.text
-            except ResourceExhausted:
-                # Trigger email notification
-                send_quota_notification(current_key)
-                
-                # Automatically cycle to the next key when limit is reached
-                _api_cycle_state['index'] += 1
-                
-                if attempt < max_attempts - 1:
-                    sleep_time = base_delay
-                    time.sleep(sleep_time)
-                    continue
-                else:
-                    last_error = f"Rate limit exceeded for all keys on {model_name}."
-            except NotFound:
-                # print(f"DEBUG: Model {model_name} not found, skipping.")
-                last_error = f"Model {model_name} not found."
-                break # Move to next model immediately
-            except ValueError:
-                 return json.dumps({
-                    "error": "Image analysis blocked by safety filters. Please try another image."
-                })
-            except Exception as e:
-                 last_error = f"API Error with {model_name}: {str(e)}"
-                 
-                 # Cycle key on generic errors (like invalid key or authentication issues)
-                 _api_cycle_state['index'] += 1
-                 if attempt < max_attempts - 1:
-                     time.sleep(base_delay)
-                     continue
-                 else:
-                     break
-        
-    # If we've tried all models and failed
-    return json.dumps({"error": f"The AI service is currently busy. Last error: {last_error}"})
 
 
 
@@ -518,23 +447,14 @@ def analyze_damage():
     
     if file:
         try:
-            # Read the image file
+            # Step 3 & 4: Compress image before sending to Gemini
             image_bytes = file.read()
-            image = Image.open(io.BytesIO(image_bytes))
+            compressed_image = compress_image(image_bytes)
             
-            # Convert to RGB if necessary (handles RGBA/Transparency)
-            if image.mode in ("RGBA", "P"):
-                image = image.convert("RGB")
-            
-            # Resize image if it's too large (e.g., > 1600px)
-            # This speeds up the upload to Gemini and prevents memory issues
-            max_size = 1600
-            if max(image.size) > max_size:
-                image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-            
-            # Get response from Gemini
-            gemini_response = get_gemini_response(image)
-            print(f"DEBUG - Raw Gemini Response: {gemini_response}") # Log to console
+            # Get response from Gemini using compressed data
+            gemini_response = get_gemini_response(compressed_image)
+            print(f"DEBUG - Raw Gemini Response: {gemini_response}") 
+
 
             # It should be valid JSON now, but let's be safe
             try:
