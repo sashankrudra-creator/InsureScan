@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 7
+names: ['Bonnet', 'Bumper', 'Dickey', 'Door', 'Fender', 'Light', 'Windshield']
+
+roboflow:
+  workspace: sashank-pwjz0
+  project: car-damage-detection-t0g92-cn3te
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/sashank-pwjz0/car-damage-detection-t0g92-cn3te/dataset/1

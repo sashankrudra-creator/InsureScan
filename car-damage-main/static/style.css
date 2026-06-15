@@ -1066,3 +1066,19 @@ footer { border-top: 1px solid var(--border); padding: 48px 48px 32px; }
   25% { transform: translateX(-5px); }
   75% { transform: translateX(5px); }
 }
+
+/* ── INSURANCE MODAL & SUCCESS ── */
+.insurance-card:hover {
+  border-color: var(--accent) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(11, 255, 143, 0.1);
+}
+.insurance-card:hover .btn-claim-action {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+@keyframes scaleUp {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}

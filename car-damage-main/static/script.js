@@ -325,8 +325,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Insurance Claim Logic ──
+    const claimInsuranceBtn = document.getElementById('claimInsuranceBtn');
+    const insuranceModal = document.getElementById('insuranceModal');
+    const closeInsuranceModal = document.getElementById('closeInsuranceModal');
+    const insuranceBackdrop = document.getElementById('insuranceBackdrop');
+    const successModal = document.getElementById('successModal');
+    const closeSuccessModal = document.getElementById('closeSuccessModal');
+    const successBackdrop = document.getElementById('successBackdrop');
+    const claimActionBtns = document.querySelectorAll('.btn-claim-action');
+
+    function openInsuranceModal(e) {
+        if (e) e.preventDefault();
+        if (insuranceModal) {
+            insuranceModal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeInsurance() {
+        if (insuranceModal) {
+            insuranceModal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+    }
+
+    function openSuccessModal() {
+        if (successModal) {
+            successModal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeSuccess() {
+        if (successModal) {
+            successModal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+    }
+
+    if (claimInsuranceBtn) claimInsuranceBtn.addEventListener('click', openInsuranceModal);
+    if (closeInsuranceModal) closeInsuranceModal.addEventListener('click', closeInsurance);
+    if (insuranceBackdrop) insuranceBackdrop.addEventListener('click', closeInsurance);
+
+    if (closeSuccessModal) closeSuccessModal.addEventListener('click', closeSuccess);
+    if (successBackdrop) successBackdrop.addEventListener('click', closeSuccess);
+
+    claimActionBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            closeInsurance();
+            setTimeout(openSuccessModal, 300);
+        });
+    });
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && demoModal && demoModal.classList.contains('open')) closeDemo();
+        if (e.key === 'Escape' && insuranceModal && insuranceModal.classList.contains('open')) closeInsurance();
+        if (e.key === 'Escape' && successModal && successModal.classList.contains('open')) closeSuccess();
         if (e.key === 'Escape' && navLinks && navLinks.classList.contains('active')) {
             navLinks.classList.remove('active');
             if (navToggle) navToggle.textContent = '☰';

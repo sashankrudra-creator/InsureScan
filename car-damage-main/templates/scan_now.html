@@ -146,8 +146,9 @@
       </div>
     </div>
 
-    <div style="text-align:center; margin-top:32px;">
+    <div style="text-align:center; margin-top:32px; display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
       <button id="downloadPdfBtnBottom" class="btn-primary" style="padding:12px 24px; font-size:16px;">⬇ Download Full PDF Report</button>
+      <button id="claimInsuranceBtn" class="btn-primary" style="padding:12px 24px; font-size:16px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff; box-shadow: 0 10px 25px rgba(0, 242, 254, 0.3);">🛡️ Claim Insurance</button>
     </div>
   </div>
 
@@ -181,6 +182,48 @@
       </div>
     </div>
   </footer>
+
+  <!-- INSURANCE CLAIM MODAL -->
+  <div id="insuranceModal" class="demo-modal">
+    <div class="demo-modal-backdrop" id="insuranceBackdrop"></div>
+    <div class="demo-modal-box" style="padding: 32px; max-width: 600px;">
+      <button class="demo-close" id="closeInsuranceModal">&times;</button>
+      <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 32px; margin-bottom: 24px; color: #fff; text-align: center;">Select Insurance Provider</h2>
+      <div class="insurance-grid" style="display: grid; gap: 16px;">
+        <div class="insurance-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
+          <div class="ins-logo" style="font-weight: bold; font-size: 18px; color: #fff;">ICICI Lombard</div>
+          <button class="btn-secondary btn-claim-action" style="padding: 8px 16px; font-size: 13px;">Select</button>
+        </div>
+        <div class="insurance-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
+          <div class="ins-logo" style="font-weight: bold; font-size: 18px; color: #fff;">HDFC ERGO</div>
+          <button class="btn-secondary btn-claim-action" style="padding: 8px 16px; font-size: 13px;">Select</button>
+        </div>
+        <div class="insurance-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
+          <div class="ins-logo" style="font-weight: bold; font-size: 18px; color: #fff;">Bajaj Allianz</div>
+          <button class="btn-secondary btn-claim-action" style="padding: 8px 16px; font-size: 13px;">Select</button>
+        </div>
+        <div class="insurance-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
+          <div class="ins-logo" style="font-weight: bold; font-size: 18px; color: #fff;">Tata AIG</div>
+          <button class="btn-secondary btn-claim-action" style="padding: 8px 16px; font-size: 13px;">Select</button>
+        </div>
+        <div class="insurance-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
+          <div class="ins-logo" style="font-weight: bold; font-size: 18px; color: #fff;">Reliance General Insurance</div>
+          <button class="btn-secondary btn-claim-action" style="padding: 8px 16px; font-size: 13px;">Select</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS MODAL -->
+  <div id="successModal" class="demo-modal">
+    <div class="demo-modal-backdrop" id="successBackdrop"></div>
+    <div class="demo-modal-box" style="padding: 48px; max-width: 400px; text-align: center;">
+      <div class="success-icon" style="font-size: 72px; margin-bottom: 24px; animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);">✅</div>
+      <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: #fff; margin-bottom: 16px;">Claim Submitted</h2>
+      <p style="color: var(--muted); margin-bottom: 32px; line-height: 1.6;">Your insurance claim has been submitted successfully. Our representative will contact you shortly.</p>
+      <button class="btn-primary" id="closeSuccessModal" style="width: 100%; justify-content: center;">Done</button>
+    </div>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
