@@ -225,6 +225,13 @@ def get_gemini_response(image):
 
     prompt = """
     You are an expert car damage assessor and cost estimator.
+    IMPORTANT:
+    Return ONLY valid JSON.
+    Do not use markdown.
+    Do not use ```json blocks.
+    Do not include explanations.
+    Do not include any text before or after the JSON.
+    The response must be valid for Python json.loads().
     
     IMPORTANT FIRST STEP: Verify if the image clearly contains a car (e.g., hatchback, sedan, SUV, coupe, wagon, etc.).
     If the image DOES NOT contain a car (for example, if it is a motorcycle, bicycle, truck, bus, person, landscape, document, or any other object), you must NOT perform any damage analysis. Instead, output a JSON object with this exact schema:
@@ -537,17 +544,29 @@ def analyze_damage():
             print(f"DEBUG - Raw Gemini Response: {gemini_response}") 
 
             try:
-                # ── CLEAN JSON LOGIC ──
-                # Remove markdown code blocks if present
+                # CLEAN GEMINI RESPONSE
                 clean_response = gemini_response.strip()
+
+                # Remove markdown code blocks if present
                 if clean_response.startswith("```"):
-                    # Remove the first line (```json) and the last line (```)
                     lines = clean_response.splitlines()
-                    if lines[0].startswith("```"): lines = lines[1:]
-                    if lines and lines[-1].startswith("```"): lines = lines[:-1]
+                    if lines[0].startswith("```"):lines = lines[1:]
+                    if lines and lines[-1].startswith("```"):lines = lines[:-1]
                     clean_response = "\n".join(lines).strip()
-                
+
+                 # Extract only the JSON object
+                start = clean_response.find("{")
+                end = clean_response.rfind("}")
+
+                if start != -1 and end != -1:
+                    clean_response = clean_response[start:end + 1]
+
+                print("DEBUG - Cleaned JSON:")
+                print(clean_response)
+
                 result = json.loads(clean_response)
+
+                # Increment count and store...
                 
                 # Increment count and store...
                 if not result.get('error'):
