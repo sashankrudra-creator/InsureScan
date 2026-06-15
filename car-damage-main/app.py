@@ -292,7 +292,7 @@ def get_gemini_response(image):
                 response = model.generate_content(
                 [prompt, image],
                 generation_config=generation_config,
-                request_options={"timeout": 120}
+                request_options={"timeout": 180}
                 )
                 
                 # Check if the response has candidates and if they are blocked
