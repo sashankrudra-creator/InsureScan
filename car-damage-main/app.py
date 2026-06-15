@@ -290,8 +290,9 @@ def get_gemini_response(image):
                 model = genai.GenerativeModel(model_name)
                 
                 response = model.generate_content(
-                    [prompt, image],
-                    generation_config=generation_config
+                [prompt, image],
+                generation_config=generation_config,
+                request_options={"timeout": 120}
                 )
                 
                 # Check if the response has candidates and if they are blocked
@@ -538,7 +539,11 @@ def analyze_damage():
             # Read the image file
             image_bytes = file.read()
             image = Image.open(io.BytesIO(image_bytes))
-            
+
+            # Resize large images before sending to Gemini
+            if image.width > 1024 or image.height > 1024:
+                image.thumbnail((1024, 1024))
+
             # Get response from Gemini
             gemini_response = get_gemini_response(image)
             print(f"DEBUG - Raw Gemini Response: {gemini_response}") 
