@@ -269,7 +269,7 @@ def get_gemini_response(image):
         "temperature": 0.4,
         "top_p": 1,
         "top_k": 32,
-        "max_output_tokens": 2048, # Reduced tokens to save on TPM limits
+        "max_output_tokens": 4096, # Reduced tokens to save on TPM limits
         "response_mime_type": "application/json",
     }
 
