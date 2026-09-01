@@ -3,7 +3,8 @@ import json
 import sqlite3
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-import google.generativeai as genai
+import base64
+import requests
 from dotenv import load_dotenv
 from PIL import Image
 import io
@@ -149,7 +150,6 @@ def get_api_keys():
         keys = [str(k).strip() for k in keys_env.split(',') if str(k).strip()]
     
     if not keys:
-        # Fallback to single or multiple individual keys (e.g. GOOGLE_API_KEY, GOOGLE_API_KEY_1)
         for key, value in os.environ.items():
             if key.startswith('GOOGLE_API_KEY') and str(value).strip():
                 if str(value).strip() not in keys:
@@ -194,7 +194,8 @@ def send_quota_notification(exhausted_key):
     msg['To'] = target_email
 
     try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
             server.login(sender_email, app_password)
             server.sendmail(sender_email, target_email, msg.as_string())
         
@@ -204,23 +205,21 @@ def send_quota_notification(exhausted_key):
         print(f"ERROR: Failed to send email notification: {str(e)}")
 # ---------------------------------
 
+# ---------------------------------
+
 initial_keys = get_api_keys()
-if initial_keys:
-    genai.configure(api_key=initial_keys[0])
 
 def get_gemini_response(image):
     # Reload keys dynamically
     available_keys = get_api_keys()
     
     if not available_keys:
-        raise ValueError("API Keys not found. Please set GOOGLE_API_KEY or GOOGLE_API_KEYS in .env file.")
+        raise ValueError("API Keys not found. Please set GOOGLE_API_KEYS in .env file.")
 
-    # Updated models based on actual availability for your keys
     models_to_try = [
-        'gemini-flash-latest',    # This is the most stable 'Flash' model
-        'gemini-pro-latest',     # The most stable 'Pro' model
-        'gemini-2.0-flash',       # Newer experimental Flash
-        'gemini-2.0-flash-lite'   # Fast, light version of 2.0
+        'gemini-3.5-flash',
+        'gemini-flash-latest',
+        'gemini-2.5-flash'
     ]
 
     prompt = """
@@ -265,87 +264,84 @@ def get_gemini_response(image):
     }
     """
     
-    generation_config = {
-        "temperature": 0.4,
-        "top_p": 1,
-        "top_k": 32,
-        "max_output_tokens": 4096, # Reduced tokens to save on TPM limits
-        "response_mime_type": "application/json",
-    }
-
     import time
-    from google.api_core.exceptions import ResourceExhausted, NotFound, InternalServerError, ServiceUnavailable
-
     last_error = "No requests made yet"
     
-    # Try different model families
+    # Convert image to base64
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG")
+    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    img_url = f"data:image/jpeg;base64,{img_str}"
+
     for model_name in models_to_try:
-        # We try each available key for this model
         for key_index in range(len(available_keys)):
             current_key = available_keys[(_api_cycle_state['index'] + key_index) % len(available_keys)]
             
-            try:
-                # IMPORTANT: We must configure the key BEFORE creating the model object
-                genai.configure(api_key=current_key)
-                model = genai.GenerativeModel(model_name)
-                
-                response = model.generate_content(
-                [prompt, image],
-                generation_config=generation_config
-                )
-                
-                # Check if the response has candidates and if they are blocked
-                if not response.candidates:
-                    last_error = "No response candidates (blocked?)"
-                    continue
+            headers = {
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": prompt},
+                            {
+                                "inline_data": {
+                                    "mime_type": "image/jpeg",
+                                    "data": img_str
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.4,
+                    "responseMimeType": "application/json"
+                }
+            }
 
-                try:
-                    text = response.text
+            try:
+                # Call Gemini REST API directly
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={current_key}"
+                response = requests.post(url, headers=headers, json=payload)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    try:
+                        text = data['candidates'][0]['content']['parts'][0]['text']
+                    except (KeyError, IndexError):
+                        last_error = "Safety block or invalid response format from Gemini"
+                        print(f"DEBUG: {last_error}")
+                        continue
+                    
                     if not text or len(text.strip()) < 2:
                         last_error = "Empty response text"
                         continue
                         
-                    # Success! Save this key's index for the next user request
                     _api_cycle_state['index'] = (_api_cycle_state['index'] + key_index) % len(available_keys)
                     return text
-                except (ValueError, AttributeError) as e:
-                    # This often happens if the safety filter blocked the text output
-                    print(f"DEBUG: Safety block or invalid response text: {str(e)}")
-                    last_error = "Content blocked by safety filters"
+                    
+                elif response.status_code == 429:
+                    print(f"DEBUG: Limit reached on {model_name}: {response.text}")
+                    send_quota_notification(current_key)
+                    last_error = f"Limit reached for key on {model_name}: {response.text}"
+                    time.sleep(1)
+                    continue
+                else:
+                    last_error = f"Gemini API Error {response.status_code}: {response.text}"
+                    print(f"DEBUG: {last_error}")
                     continue
 
-            except ResourceExhausted as e:
-                print(f"DEBUG: Limit reached for key ending in ...{current_key[-5:]} on {model_name}")
-                send_quota_notification(current_key)
-                last_error = f"Limit reached for key on {model_name}"
-                # If this is the last key for this model, wait 2s before trying the next model family
-                time.sleep(1)
-                continue
-
-            except (ServiceUnavailable, InternalServerError):
-                print(f"DEBUG: Gemini Server Busy on {model_name} with key ...{current_key[-5:]}")
-                last_error = "Gemini is overloaded"
-                time.sleep(3) # Wait longer if the server itself is busy
-                continue
-
-            except NotFound:
-                last_error = f"Model {model_name} not available for this key"
-                break # Move to next model family (don't waste other keys on missing model)
-
             except Exception as e:
-                if "safety" in str(e).lower() or isinstance(e, ValueError):
-                    return json.dumps({"error": "Analysis blocked by content safety filters."})
-                
+                print(f"DEBUG: Unhandled exception on {model_name}: {type(e).__name__} - {str(e)}")
                 last_error = str(e)
-                print(f"DEBUG: Unexpected error: {last_error}")
-                time.sleep(1)
                 continue
         
-        # After trying all keys for one model family, wait a bit
         time.sleep(1)
 
     return json.dumps({
-        "error": f"All keys/models exhausted. {last_error}. This usually means your free quota is finished for today. Please wait or try a new Google Account key.",
+        "error": f"All keys/models exhausted. {last_error}. This usually means your free quota is finished for today. Please wait or try a new key.",
         "details": last_error
     })
 
@@ -545,7 +541,7 @@ def analyze_damage():
 
             # Get response from Gemini
             gemini_response = get_gemini_response(image)
-            print(f"DEBUG - Raw Gemini Response: {gemini_response}") 
+            print(f"DEBUG - Raw Gemini API Response: {gemini_response}") 
 
             try:
                 # CLEAN GEMINI RESPONSE
